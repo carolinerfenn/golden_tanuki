@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACT Question QA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F7F5F0;
+  --surface: #FFFFFF;
+  --surface2: #F0EDE6;
+  --border: #E0DAD0;
+  --border-dark: #C8C0B0;
+  --text: #1A1714;
+  --muted: #8A8278;
+  --accent: #2D5BE3;
+  --accent-dim: #EBF0FD;
+  --green: #1A7A4A;
+  --green-dim: #E6F5ED;
+  --green-mid: #2EAB68;
+  --yellow: #A06B00;
+  --yellow-dim: #FDF4E0;
+  --red: #C0341A;
+  --red-dim: #FDEAE6;
+  --purple: #6B3EA6;
+  --purple-dim: #F2EBF9;
+  --serif: 'Instrument Serif', Georgia, serif;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Layout ── */
+.app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+.topbar {
+  background: var(--text);
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.topbar-left { display: flex; align-items: center; gap: 20px; }
+.topbar h1 { font-family: var(--serif); font-size: 18px; font-weight: 400; color: #F7F5F0; letter-spacing: 0.01em; }
+.topbar-badge { font-family: var(--mono); font-size: 10px; color: #8A8278; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.progress-wrap { display: flex; align-items: center; gap: 12px; }
+.progress-track { width: 160px; height: 3px; background: #3A3530; border-radius: 2px; }
+.progress-fill { height: 100%; background: var(--green-mid); border-radius: 2px; transition: width 0.3s ease; }
+.progress-label { font-family: var(--mono); font-size: 11px; color: #8A8278; white-space: nowrap; }
+
+.main { display: grid; grid-template-columns: 1fr 360px; gap: 0; overflow: hidden; height: calc(100vh - 52px); }
+
+/* ── Left: question panel ── */
+.q-panel { padding: 32px 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+
+.q-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.q-num { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.chip { font-family: var(--mono); font-size: 10px; font-weight: 500; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.04em; }
+.chip-skill { background: var(--accent-dim); color: var(--accent); }
+.chip-d1 { background: var(--green-dim); color: var(--green); }
+.chip-d2 { background: var(--yellow-dim); color: var(--yellow); }
+.chip-d3 { background: var(--red-dim); color: var(--red); }
+
+.q-stem-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+
+.q-stem {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.65;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 26px;
+  position: relative;
+}
+.q-stem::before {
+  content: '"';
+  font-family: var(--serif);
+  font-size: 48px;
+  color: var(--border);
+  position: absolute;
+  top: 8px;
+  left: 16px;
+  line-height: 1;
+}
+
+.options-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+
+.options { display: flex; flex-direction: column; gap: 8px; }
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.option:hover { border-color: var(--border-dark); }
+.option.selected { border-color: var(--accent); background: var(--accent-dim); }
+.option.correct { border-color: var(--green); background: var(--green-dim); }
+.option.incorrect { border-color: var(--red); background: var(--red-dim); opacity: 0.7; }
+.option.revealed-correct { border-color: var(--green); background: var(--green-dim); }
+
+.option-letter {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: all 0.15s;
+}
+.option.selected .option-letter { background: var(--accent); color: white; }
+.option.correct .option-letter, .option.revealed-correct .option-letter { background: var(--green); color: white; }
+.option.incorrect .option-letter { background: var(--red); color: white; }
+
+.option-text { font-size: 14px; line-height: 1.5; color: var(--text); }
+
+/* Answer feedback */
+.answer-reveal {
+  display: none;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.answer-reveal.show { display: block; }
+.answer-reveal.right { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
+.answer-reveal.wrong { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
+
+.check-btn {
+  align-self: flex-start;
+  padding: 10px 22px;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: 7px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  display: none;
+}
+.check-btn:hover { opacity: 0.85; }
+.check-btn.visible { display: block; }
+
+/* Explanation */
+.explanation-wrap { display: none; }
+.explanation-wrap.show { display: block; }
+.expl-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+.expl-text {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+/* Distractor notes */
+.distractor-wrap { display: none; }
+.distractor-wrap.show { display: block; }
+.distractors { display: flex; flex-direction: column; gap: 6px; }
+.distractor-item { font-size: 12px; line-height: 1.5; color: var(--muted); padding: 8px 12px; background: var(--surface2); border-radius: 6px; }
+.distractor-item strong { color: var(--text); font-weight: 500; }
+
+/* ── Right: QA panel ── */
+.qa-panel {
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.qa-top {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.qa-title { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+
+.checklist { display: flex; flex-direction: column; gap: 6px; }
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+}
+.check-item:hover { background: var(--surface2); }
+.check-item.checked { background: var(--green-dim); }
+.check-box {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border-dark);
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  background: white;
+}
+.check-item.checked .check-box { background: var(--green); border-color: var(--green); }
+.check-box svg { display: none; }
+.check-item.checked .check-box svg { display: block; }
+.check-text { font-size: 12px; line-height: 1.4; color: var(--text); }
+.check-item.checked .check-text { color: var(--green); }
+
+.qa-bottom { padding: 16px 24px; flex: 1; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+
+.notes-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.notes-input {
+  width: 100%;
+  min-height: 72px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.notes-input:focus { border-color: var(--border-dark); }
+.notes-input::placeholder { color: var(--muted); }
+
+.decision-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+.decision-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.dec-btn {
+  padding: 10px 8px;
+  border-radius: 7px;
+  border: 1.5px solid transparent;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.dec-btn-approve { background: var(--green-dim); color: var(--green); border-color: var(--green-dim); }
+.dec-btn-approve:hover, .dec-btn-approve.active { background: var(--green); color: white; border-color: var(--green); }
+.dec-btn-revise { background: var(--yellow-dim); color: var(--yellow); border-color: var(--yellow-dim); }
+.dec-btn-revise:hover, .dec-btn-revise.active { background: var(--yellow); color: white; border-color: var(--yellow); }
+.dec-btn-reject { background: var(--red-dim); color: var(--red); border-color: var(--red-dim); }
+.dec-btn-reject:hover, .dec-btn-reject.active { background: var(--red); color: white; border-color: var(--red); }
+.dec-btn-reclassify { background: var(--purple-dim); color: var(--purple); border-color: var(--purple-dim); }
+.dec-btn-reclassify:hover, .dec-btn-reclassify.active { background: var(--purple); color: white; border-color: var(--purple); }
+
+.nav-btns { display: flex; gap: 8px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); }
+.nav-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: white;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text);
+}
+.nav-btn:hover { border-color: var(--border-dark); background: var(--surface2); }
+.nav-btn-next { background: var(--text); color: var(--bg); border-color: var(--text); }
+.nav-btn-next:hover { opacity: 0.85; }
+.nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.shortcuts-hint { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; }
+.shortcuts-hint span { color: var(--text); }
+
+/* ── Upload screen ── */
+.upload-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 32px;
+  padding: 40px;
+}
+.upload-screen h2 { font-family: var(--serif); font-size: 32px; font-weight: 400; color: var(--text); }
+.upload-screen p { font-size: 14px; color: var(--muted); text-align: center; max-width: 480px; line-height: 1.6; }
+
+.paste-area {
+  width: 100%;
+  max-width: 600px;
+  min-height: 160px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+  line-height: 1.6;
+}
+.paste-area:focus { border-color: var(--border-dark); }
+.paste-area::placeholder { color: var(--muted); }
+
+.load-btn {
+  padding: 12px 32px;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.load-btn:hover { opacity: 0.85; }
+.load-error { font-family: var(--mono); font-size: 12px; color: var(--red); }
+
+/* ── Complete screen ── */
+.complete-screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 24px;
+  padding: 40px;
+  text-align: center;
+}
+.complete-screen.show { display: flex; }
+.complete-icon { font-size: 48px; }
+.complete-screen h2 { font-family: var(--serif); font-size: 28px; font-weight: 400; }
+.complete-screen p { font-size: 14px; color: var(--muted); max-width: 440px; line-height: 1.6; }
+
+.dl-csv-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.dl-csv-btn:hover { opacity: 0.85; }
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 500px;
+}
+.summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+.summary-num { font-family: var(--mono); font-size: 24px; font-weight: 500; }
+.summary-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.summary-card.approved .summary-num { color: var(--green); }
+.summary-card.revise .summary-num { color: var(--yellow); }
+.summary-card.rejected .summary-num { color: var(--red); }
+.summary-card.reclassified .summary-num { color: var(--purple); }
+
+.restart-btn {
+  background: none;
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.restart-btn:hover { border-color: var(--border-dark); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- UPLOAD SCREEN -->
+  <div class="upload-screen" id="upload-screen">
+    <div style="text-align:center">
+      <h2>Question QA Review</h2>
+      <p style="margin-top:8px">Paste Claude's JSON output below. You'll review each question one at a time, solve it yourself, then make a QA decision.</p>
+    </div>
+    <textarea class="paste-area" id="paste-input" placeholder='Paste Claude&apos;s JSON array here — starting with [ and ending with ]'></textarea>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:600px">
+      <div style="width:100%;display:flex;flex-direction:column;gap:6px">
+        <label style="font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">Your name</label>
+        <input type="text" id="reviewer-name" placeholder="e.g. Maya Patel"
+          style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-family:var(--sans);font-size:13px;color:var(--text);outline:none;"
+          onfocus="this.style.borderColor='var(--border-dark)'"
+          onblur="this.style.borderColor='var(--border)'"/>
+      </div>
+      <button class="load-btn" onclick="loadQuestions()">Start Review</button>
+      <div class="load-error" id="load-error"></div>
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;max-width:480px;line-height:1.7">
+      Keyboard shortcuts during review:<br>
+      <span style="color:var(--text)">A</span> approve &nbsp;·&nbsp;
+      <span style="color:var(--text)">V</span> needs revision &nbsp;·&nbsp;
+      <span style="color:var(--text)">X</span> reject &nbsp;·&nbsp;
+      <span style="color:var(--text)">R</span> reclassify &nbsp;·&nbsp;
+      <span style="color:var(--text)">→</span> next &nbsp;·&nbsp;
+      <span style="color:var(--text)">←</span> prev
+    </div>
+  </div>
+
+  <!-- REVIEW SCREEN (hidden until loaded) -->
+  <div id="review-screen" style="display:none; grid-template-rows: auto 1fr; min-height:100vh;">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Question QA Review</h1>
+        <span class="topbar-badge" id="skill-badge"></span>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+        <span class="progress-label" id="progress-label">0 / 0</span>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+
+      <!-- Left: question -->
+      <div class="q-panel" id="q-panel">
+        <div class="q-meta">
+          <span class="q-num" id="q-num">Question 1</span>
+          <span class="chip chip-skill" id="chip-slug"></span>
+          <span class="chip" id="chip-diff"></span>
+        </div>
+
+        <div>
+          <div class="q-stem-label">Question stem</div>
+          <div class="q-stem" id="q-stem"></div>
+        </div>
+
+        <div>
+          <div class="options-label">Answer options — select your answer before revealing</div>
+          <div class="options" id="options"></div>
+        </div>
+
+        <button class="check-btn" id="check-btn" onclick="checkAnswer()">Check my answer</button>
+
+        <div class="answer-reveal" id="answer-reveal"></div>
+
+        <div class="explanation-wrap" id="expl-wrap">
+          <div class="expl-label">Explanation</div>
+          <div class="expl-text" id="expl-text"></div>
+        </div>
+
+        <div class="distractor-wrap" id="dist-wrap">
+          <div class="expl-label">Distractor notes</div>
+          <div class="distractors" id="distractors"></div>
+        </div>
+      </div>
+
+      <!-- Right: QA -->
+      <div class="qa-panel">
+        <div class="qa-top">
+          <div class="qa-title">QA Checklist</div>
+          <div class="checklist" id="checklist">
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="check-text">I solved this question myself</div>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="check-text">Tests exactly one skill</div>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="check-text">Correct answer is unambiguous</div>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="check-text">All wrong answers are plausible</div>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="check-text">Explanation teaches the rule</div>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="check-text">Difficulty matches the level</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="qa-bottom">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="notes-label">Notes</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Question stem</div>
+              <textarea class="notes-input" id="notes-question" placeholder="Any issues with the stem…" style="min-height:44px"></textarea>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Answer options</div>
+              <textarea class="notes-input" id="notes-answers" placeholder="Any issues with options or distractors…" style="min-height:44px"></textarea>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Explanation</div>
+              <textarea class="notes-input" id="notes-explanation" placeholder="Any issues with the explanation…" style="min-height:44px"></textarea>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Overall</div>
+              <textarea class="notes-input" id="notes-overall" placeholder="Overall decision note…" style="min-height:44px"></textarea>
+            </div>
+          </div>
+
+          <div>
+            <div class="decision-label" style="margin-bottom:8px">Decision</div>
+            <div class="decision-btns">
+              <button class="dec-btn dec-btn-approve" onclick="setDecision('Approved')" id="btn-approve">✓ Approve</button>
+              <button class="dec-btn dec-btn-revise" onclick="setDecision('Needs revision')" id="btn-revise">✎ Revise</button>
+              <button class="dec-btn dec-btn-reject" onclick="setDecision('Rejected')" id="btn-reject">✕ Reject</button>
+              <button class="dec-btn dec-btn-reclassify" onclick="setDecision('Reclassified')" id="btn-reclassify">↕ Reclassify</button>
+            </div>
+          </div>
+
+          <div class="nav-btns">
+            <button class="nav-btn" onclick="navigate(-1)" id="btn-prev">← Prev</button>
+            <button class="nav-btn nav-btn-next" onclick="navigate(1)" id="btn-next">Next →</button>
+          </div>
+
+          <div class="shortcuts-hint">
+            <span>A</span> approve &nbsp;·&nbsp; <span>V</span> revise &nbsp;·&nbsp; <span>X</span> reject &nbsp;·&nbsp; <span>R</span> reclassify &nbsp;·&nbsp; <span>→/←</span> nav
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPLETE SCREEN -->
+  <div class="complete-screen" id="complete-screen">
+    <div class="complete-icon">✓</div>
+    <h2>Review complete</h2>
+    <p>All questions have been reviewed. Download the CSV to import your decisions into the Question Bank sheet.</p>
+    <div class="summary-grid" id="summary-grid"></div>
+    <button class="dl-csv-btn" onclick="downloadResults()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M4 7l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke-linecap="round"/></svg>
+      Download QA Results CSV
+    </button>
+    <button class="restart-btn" onclick="restart()">Review another batch</button>
+  </div>
+
+</div>
+
+<script>
+let questions = [];
+let current = 0;
+let reviews = []; // {decision, notes, checks}
+let selectedAnswer = null;
+let answered = false;
+
+// CSV column mapping — same as importer, matches Question Bank sheet
+const SKILL_META = {
+  'act_eng_clause_id': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Identifying Independent vs. Dependent Clauses'},
+  'act_eng_clause_ic_ic_fanboys': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Joining Independent Clauses: Comma + FANBOYS'},
+  'act_eng_clause_ic_ic_semicolon': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Joining Independent Clauses: Semicolon'},
+  'act_eng_clause_ic_ic_splice': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Comma Splice'},
+  'act_eng_clause_ic_ic_fused': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Fused Sentence'},
+  'act_eng_clause_ic_ic_transitional': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Joining Independent Clauses: Transitional Adverb'},
+  'act_eng_clause_dc_ic_nocomma': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Dependent Clause First: No Comma Needed'},
+  'act_eng_clause_ic_dc_comma': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Dependent Clause Last: Comma Usage'},
+  'act_eng_clause_subordinator': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Choosing the Right Subordinator'},
+  'act_eng_clause_fragment_dc': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Sentence Fragment: Dependent Clause'},
+  'act_eng_clause_fragment_sv': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Sentence Fragment: Missing Subject or Verb'},
+  'act_eng_clause_relative': {section: 'ACT English', subsection: 'Clause & Sentence Structure', skill_name: 'Relative Clauses'},
+  'act_eng_nonrest_appositive': {section: 'ACT English', subsection: 'Nonrestrictive Elements', skill_name: 'Appositives'},
+  'act_eng_nonrest_clause_comma': {section: 'ACT English', subsection: 'Nonrestrictive Elements', skill_name: 'Nonrestrictive vs. Restrictive Clauses'},
+  'act_eng_nonrest_emdash': {section: 'ACT English', subsection: 'Nonrestrictive Elements', skill_name: 'Em Dash for Nonrestrictive Elements'},
+  'act_eng_nonrest_restrict_choice': {section: 'ACT English', subsection: 'Nonrestrictive Elements', skill_name: 'Choosing Restrictive vs. Nonrestrictive'},
+  'act_eng_punc_intro': {section: 'ACT English', subsection: 'Punctuation', skill_name: 'Introductory Element Comma'},
+  'act_eng_punc_series': {section: 'ACT English', subsection: 'Punctuation', skill_name: 'Series Comma'},
+  'act_eng_punc_semicolon_series': {section: 'ACT English', subsection: 'Punctuation', skill_name: 'Semicolon in Series'},
+  'act_eng_punc_colon': {section: 'ACT English', subsection: 'Punctuation', skill_name: 'Colon Usage'},
+  'act_eng_punc_apos_possessive': {section: 'ACT English', subsection: 'Punctuation', skill_name: 'Apostrophe: Possessive'},
+  'act_eng_punc_apos_contraction': {section: 'ACT English', subsection: 'Punctuation', skill_name: 'Apostrophe: Contraction'},
+  'act_eng_punc_intrusive': {section: 'ACT English', subsection: 'Punctuation', skill_name: 'Unnecessary Punctuation'},
+  'act_eng_agr_sv_basic': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Subject-Verb Agreement: Basic'},
+  'act_eng_agr_sv_intervening': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Subject-Verb Agreement: Intervening Phrase'},
+  'act_eng_agr_sv_inverted': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Subject-Verb Agreement: Inverted Sentence'},
+  'act_eng_agr_sv_compound': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Subject-Verb Agreement: Compound Subject'},
+  'act_eng_agr_sv_collective': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Subject-Verb Agreement: Collective Noun'},
+  'act_eng_agr_pro_number': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Pronoun-Antecedent Agreement: Number'},
+  'act_eng_agr_pro_gender': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Pronoun-Antecedent Agreement: Gender'},
+  'act_eng_agr_pro_case': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Pronoun Case'},
+  'act_eng_agr_pro_who': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Who vs. Whom'},
+  'act_eng_agr_pro_ambiguous': {section: 'ACT English', subsection: 'Agreement', skill_name: 'Ambiguous Pronoun Reference'},
+  'act_eng_ss_parallel_list': {section: 'ACT English', subsection: 'Sentence Style', skill_name: 'Parallelism: Lists'},
+  'act_eng_ss_parallel_compare': {section: 'ACT English', subsection: 'Sentence Style', skill_name: 'Parallelism: Comparisons'},
+  'act_eng_ss_parallel_correlative': {section: 'ACT English', subsection: 'Sentence Style', skill_name: 'Parallelism: Correlative Conjunctions'},
+  'act_eng_ss_dangling': {section: 'ACT English', subsection: 'Sentence Style', skill_name: 'Dangling Modifier'},
+  'act_eng_ss_misplaced': {section: 'ACT English', subsection: 'Sentence Style', skill_name: 'Misplaced Modifier'},
+  'act_eng_vf_tense_consistency': {section: 'ACT English', subsection: 'Verb Form', skill_name: 'Verb Tense Consistency'},
+  'act_eng_vf_tense_sequence': {section: 'ACT English', subsection: 'Verb Form', skill_name: 'Verb Tense Sequence'},
+  'act_eng_vf_ing_inf': {section: 'ACT English', subsection: 'Verb Form', skill_name: 'Gerund vs. Infinitive'},
+  'act_eng_vf_irregular': {section: 'ACT English', subsection: 'Verb Form', skill_name: 'Irregular Verb Forms'},
+  'act_eng_vf_subjunctive': {section: 'ACT English', subsection: 'Verb Form', skill_name: 'Subjunctive Mood'},
+  'act_eng_wc_confused': {section: 'ACT English', subsection: 'Word Choice', skill_name: 'Commonly Confused Words'},
+  'act_eng_wc_idiom': {section: 'ACT English', subsection: 'Word Choice', skill_name: 'Idiomatic Expressions'},
+  'act_eng_wc_redundancy': {section: 'ACT English', subsection: 'Word Choice', skill_name: 'Redundancy'},
+  'act_eng_wc_empty': {section: 'ACT English', subsection: 'Word Choice', skill_name: 'Empty Phrases'},
+  'act_eng_wc_concision': {section: 'ACT English', subsection: 'Word Choice', skill_name: 'Concision'},
+  'act_eng_wc_tone': {section: 'ACT English', subsection: 'Word Choice', skill_name: 'Tone Consistency'},
+  'act_eng_org_trans_sentence': {section: 'ACT English', subsection: 'Organization & Style', skill_name: 'Sentence-Level Transitions'},
+  'act_eng_org_trans_para': {section: 'ACT English', subsection: 'Organization & Style', skill_name: 'Paragraph-Level Transitions'},
+  'act_eng_org_sentence_place': {section: 'ACT English', subsection: 'Organization & Style', skill_name: 'Sentence Placement'},
+  'act_eng_org_para_order': {section: 'ACT English', subsection: 'Organization & Style', skill_name: 'Paragraph Order'},
+  'act_eng_org_relevance_add': {section: 'ACT English', subsection: 'Organization & Style', skill_name: 'Adding Relevant Information'},
+  'act_eng_org_relevance_del': {section: 'ACT English', subsection: 'Organization & Style', skill_name: 'Deleting Irrelevant Information'},
+  'act_eng_org_open_close': {section: 'ACT English', subsection: 'Organization & Style', skill_name: 'Opening and Closing Sentences'},
+  'act_eng_org_goal': {section: 'ACT English', subsection: 'Organization & Style', skill_name: 'Writer\'s Goal'},
+  'act_mth_pre_pemdas': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Order of Operations (PEMDAS)'},
+  'act_mth_pre_integers': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Integer Operations'},
+  'act_mth_pre_frac_ops': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Fraction Operations'},
+  'act_mth_pre_frac_simplify': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Fraction Simplification & Comparison'},
+  'act_mth_pre_decimals': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Decimal Operations'},
+  'act_mth_pre_ratios': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Ratios'},
+  'act_mth_pre_proportions': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Proportions'},
+  'act_mth_pre_pct_convert': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Percent Conversion'},
+  'act_mth_pre_pct_of': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Percent Of'},
+  'act_mth_pre_pct_change': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Percent Change'},
+  'act_mth_pre_pct_reverse': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Reverse Percent'},
+  'act_mth_pre_abs': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Absolute Value'},
+  'act_mth_pre_factors': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Factors, Multiples & Primes'},
+  'act_mth_pre_numprops': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Number Properties'},
+  'act_mth_pre_sci_notation': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Scientific Notation'},
+  'act_mth_pre_units': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Unit Conversion'},
+  'act_mth_pre_stats_basic': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Mean, Median, Mode & Range'},
+  'act_mth_pre_weighted_avg': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Weighted Average'},
+  'act_mth_pre_counting': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Counting: Multiplication Principle'},
+  'act_mth_pre_combinations': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Combinations'},
+  'act_mth_pre_prob_basic': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Basic Probability'},
+  'act_mth_pre_prob_andor': {section: 'ACT Math', subsection: 'Pre-Algebra', skill_name: 'Probability: And/Or'},
+  'act_mth_ea_evaluate': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Evaluating Expressions'},
+  'act_mth_ea_like_terms': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Combining Like Terms'},
+  'act_mth_ea_distribute': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Distributive Property'},
+  'act_mth_ea_linear_1var': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Solving Linear Equations: One Variable'},
+  'act_mth_ea_literal': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Literal Equations'},
+  'act_mth_ea_ineq_1var': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Inequalities: One Variable'},
+  'act_mth_ea_abs_eq': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Absolute Value Equations'},
+  'act_mth_ea_abs_ineq': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Absolute Value Inequalities'},
+  'act_mth_ea_sys_sub': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Systems of Equations: Substitution'},
+  'act_mth_ea_sys_elim': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Systems of Equations: Elimination'},
+  'act_mth_ea_sys_word': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Systems of Equations: Word Problems'},
+  'act_mth_ea_poly_addsubt': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Polynomial Addition & Subtraction'},
+  'act_mth_ea_poly_mult': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Polynomial Multiplication'},
+  'act_mth_ea_factor_gcf': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Factoring: GCF'},
+  'act_mth_ea_factor_trinomial': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Factoring: Trinomials'},
+  'act_mth_ea_factor_dos': {section: 'ACT Math', subsection: 'Elementary Algebra', skill_name: 'Factoring: Difference of Squares'},
+  'act_mth_ia_quad_factor': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Quadratics: Factoring'},
+  'act_mth_ia_quad_formula': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Quadratics: Quadratic Formula'},
+  'act_mth_ia_quad_complete': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Quadratics: Completing the Square'},
+  'act_mth_ia_quad_discriminant': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Quadratics: Discriminant'},
+  'act_mth_ia_func_eval': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Functions: Evaluation'},
+  'act_mth_ia_func_domain': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Functions: Domain & Range'},
+  'act_mth_ia_func_compose': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Functions: Composition'},
+  'act_mth_ia_func_inverse': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Functions: Inverse'},
+  'act_mth_ia_radical_simplify': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Radicals: Simplification'},
+  'act_mth_ia_radical_ops': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Radicals: Operations'},
+  'act_mth_ia_radical_eq': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Radicals: Equations'},
+  'act_mth_ia_rational_simplify': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Rational Expressions: Simplification'},
+  'act_mth_ia_rational_ops': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Rational Expressions: Operations'},
+  'act_mth_ia_rational_eq': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Rational Expressions: Equations'},
+  'act_mth_ia_exponent_rules': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Exponent Rules'},
+  'act_mth_ia_exp_growth': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Exponential Growth & Decay'},
+  'act_mth_ia_log_basic': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Logarithms: Basics'},
+  'act_mth_ia_seq_arith': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Sequences: Arithmetic'},
+  'act_mth_ia_seq_geo': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Sequences: Geometric'},
+  'act_mth_ia_matrix_ops': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Matrices: Operations'},
+  'act_mth_ia_matrix_det': {section: 'ACT Math', subsection: 'Intermediate Algebra', skill_name: 'Matrices: Determinant'},
+  'act_mth_cg_points': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Plotting & Reading Points'},
+  'act_mth_cg_slope_calc': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Slope: Calculation'},
+  'act_mth_cg_slope_interp': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Slope: Interpretation'},
+  'act_mth_cg_slope_parpep': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Parallel & Perpendicular Slopes'},
+  'act_mth_cg_linear_slopeint': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Linear Equations: Slope-Intercept Form'},
+  'act_mth_cg_linear_other': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Linear Equations: Other Forms'},
+  'act_mth_cg_linear_graph': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Linear Equations: Graphing'},
+  'act_mth_cg_dist_mid': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Distance & Midpoint'},
+  'act_mth_cg_parabola_std': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Parabolas: Standard Form'},
+  'act_mth_cg_parabola_vertex': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Parabolas: Vertex Form'},
+  'act_mth_cg_circle_eq': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Circle Equations'},
+  'act_mth_cg_transforms': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Transformations'},
+  'act_mth_cg_sys_graph': {section: 'ACT Math', subsection: 'Coordinate Geometry', skill_name: 'Systems of Equations: Graphical'},
+  'act_mth_pg_angles_supp': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Supplementary & Complementary Angles'},
+  'act_mth_pg_angles_trans': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Angles: Transversals'},
+  'act_mth_pg_tri_angles': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Triangle Angle Sum'},
+  'act_mth_pg_tri_sim': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Similar Triangles'},
+  'act_mth_pg_tri_special': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Special Right Triangles'},
+  'act_mth_pg_pythagorean': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Pythagorean Theorem'},
+  'act_mth_pg_tri_area': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Triangle Area'},
+  'act_mth_pg_quad_props': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Quadrilateral Properties'},
+  'act_mth_pg_quad_area': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Quadrilateral Area'},
+  'act_mth_pg_circle_arc': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Circle: Arc Length & Sector Area'},
+  'act_mth_pg_circle_area': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Circle: Area & Circumference'},
+  'act_mth_pg_circle_inscribed': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Inscribed Angles & Polygons'},
+  'act_mth_pg_3d_sa': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: '3D Figures: Surface Area'},
+  'act_mth_pg_3d_vol': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: '3D Figures: Volume'},
+  'act_mth_pg_composite': {section: 'ACT Math', subsection: 'Plane Geometry', skill_name: 'Composite Figures'},
+  'act_mth_trig_sohcahtoa': {section: 'ACT Math', subsection: 'Trigonometry', skill_name: 'SOH-CAH-TOA'},
+  'act_mth_trig_sides': {section: 'ACT Math', subsection: 'Trigonometry', skill_name: 'Finding Missing Sides with Trig'},
+  'act_mth_trig_special_angles': {section: 'ACT Math', subsection: 'Trigonometry', skill_name: 'Special Angle Values'},
+  'act_mth_trig_reciprocal': {section: 'ACT Math', subsection: 'Trigonometry', skill_name: 'Reciprocal Trig Functions'},
+  'act_mth_trig_graphs': {section: 'ACT Math', subsection: 'Trigonometry', skill_name: 'Trig Graphs: Amplitude, Period & Phase'},
+  'act_mth_trig_pyth_identity': {section: 'ACT Math', subsection: 'Trigonometry', skill_name: 'Pythagorean Identity'},
+  'act_mth_trig_law_sines': {section: 'ACT Math', subsection: 'Trigonometry', skill_name: 'Law of Sines'},
+  'act_mth_trig_law_cosines': {section: 'ACT Math', subsection: 'Trigonometry', skill_name: 'Law of Cosines'},
+  'act_rdg_mi_single': {section: 'ACT Reading', subsection: 'Main Idea', skill_name: 'Main Idea: Single Passage'},
+  'act_rdg_mi_paired': {section: 'ACT Reading', subsection: 'Main Idea', skill_name: 'Main Idea: Paired Passages'},
+  'act_rdg_mi_purpose': {section: 'ACT Reading', subsection: 'Main Idea', skill_name: 'Author\'s Purpose'},
+  'act_rdg_mi_para_purpose': {section: 'ACT Reading', subsection: 'Main Idea', skill_name: 'Paragraph Purpose'},
+  'act_rdg_mi_title': {section: 'ACT Reading', subsection: 'Main Idea', skill_name: 'Best Title'},
+  'act_rdg_de_locate': {section: 'ACT Reading', subsection: 'Detail', skill_name: 'Locating Details'},
+  'act_rdg_de_except': {section: 'ACT Reading', subsection: 'Detail', skill_name: 'Detail: EXCEPT Questions'},
+  'act_rdg_de_sequence': {section: 'ACT Reading', subsection: 'Detail', skill_name: 'Sequence of Events'},
+  'act_rdg_de_evidence': {section: 'ACT Reading', subsection: 'Detail', skill_name: 'Textual Evidence'},
+  'act_rdg_de_cause_effect': {section: 'ACT Reading', subsection: 'Detail', skill_name: 'Cause & Effect'},
+  'act_rdg_inf_implied': {section: 'ACT Reading', subsection: 'Inference', skill_name: 'Implied Information'},
+  'act_rdg_inf_motivation': {section: 'ACT Reading', subsection: 'Inference', skill_name: 'Character Motivation'},
+  'act_rdg_inf_assumption': {section: 'ACT Reading', subsection: 'Inference', skill_name: 'Author\'s Assumption'},
+  'act_rdg_inf_generalize': {section: 'ACT Reading', subsection: 'Inference', skill_name: 'Generalization'},
+  'act_rdg_inf_predict': {section: 'ACT Reading', subsection: 'Inference', skill_name: 'Prediction'},
+  'act_rdg_voc_meaning': {section: 'ACT Reading', subsection: 'Vocabulary in Context', skill_name: 'Word Meaning in Context'},
+  'act_rdg_voc_connotation': {section: 'ACT Reading', subsection: 'Vocabulary in Context', skill_name: 'Connotation'},
+  'act_rdg_voc_figurative': {section: 'ACT Reading', subsection: 'Vocabulary in Context', skill_name: 'Figurative Language'},
+  'act_rdg_craft_tone': {section: 'ACT Reading', subsection: 'Craft & Structure', skill_name: 'Tone & Mood'},
+  'act_rdg_craft_pov': {section: 'ACT Reading', subsection: 'Craft & Structure', skill_name: 'Point of View'},
+  'act_rdg_craft_rhetoric': {section: 'ACT Reading', subsection: 'Craft & Structure', skill_name: 'Rhetorical Devices'},
+  'act_rdg_craft_evidence_use': {section: 'ACT Reading', subsection: 'Craft & Structure', skill_name: 'How Evidence is Used'},
+  'act_rdg_craft_compare': {section: 'ACT Reading', subsection: 'Craft & Structure', skill_name: 'Comparing Passages'},
+  'act_rdg_data_read': {section: 'ACT Reading', subsection: 'Data Interpretation', skill_name: 'Reading Graphs & Tables'},
+  'act_rdg_data_relate': {section: 'ACT Reading', subsection: 'Data Interpretation', skill_name: 'Relating Data to Text'},
+  'act_rdg_data_trend': {section: 'ACT Reading', subsection: 'Data Interpretation', skill_name: 'Identifying Trends in Data'},
+  'act_sci_dr_read_graph': {section: 'ACT Science', subsection: 'Data Representation', skill_name: 'Reading Graphs'},
+  'act_sci_dr_read_table': {section: 'ACT Science', subsection: 'Data Representation', skill_name: 'Reading Tables'},
+  'act_sci_dr_interpolate': {section: 'ACT Science', subsection: 'Data Representation', skill_name: 'Interpolation'},
+  'act_sci_dr_extrapolate': {section: 'ACT Science', subsection: 'Data Representation', skill_name: 'Extrapolation'},
+  'act_sci_dr_trend_dir': {section: 'ACT Science', subsection: 'Data Representation', skill_name: 'Trend Direction'},
+  'act_sci_dr_trend_rate': {section: 'ACT Science', subsection: 'Data Representation', skill_name: 'Rate of Change'},
+  'act_sci_dr_compare': {section: 'ACT Science', subsection: 'Data Representation', skill_name: 'Comparing Data Sets'},
+  'act_sci_dr_axes': {section: 'ACT Science', subsection: 'Data Representation', skill_name: 'Interpreting Axes & Units'},
+  'act_sci_dr_multivar': {section: 'ACT Science', subsection: 'Data Representation', skill_name: 'Multi-Variable Relationships'},
+  'act_sci_rs_indep_var': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Independent Variable'},
+  'act_sci_rs_dep_var': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Dependent Variable'},
+  'act_sci_rs_control_var': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Control Variables'},
+  'act_sci_rs_design': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Experimental Design'},
+  'act_sci_rs_results': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Interpreting Results'},
+  'act_sci_rs_hypothesis': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Hypothesis'},
+  'act_sci_rs_error': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Sources of Error'},
+  'act_sci_rs_followup': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Follow-up Experiments'},
+  'act_sci_rs_apply': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Applying Findings'},
+  'act_sci_rs_synthesize': {section: 'ACT Science', subsection: 'Research Summaries', skill_name: 'Synthesizing Multiple Studies'},
+  'act_sci_cv_one_position': {section: 'ACT Science', subsection: 'Conflicting Viewpoints', skill_name: 'One Scientist\'s Position'},
+  'act_sci_cv_two_position': {section: 'ACT Science', subsection: 'Conflicting Viewpoints', skill_name: 'Comparing Two Positions'},
+  'act_sci_cv_agree': {section: 'ACT Science', subsection: 'Conflicting Viewpoints', skill_name: 'Points of Agreement'},
+  'act_sci_cv_disagree': {section: 'ACT Science', subsection: 'Conflicting Viewpoints', skill_name: 'Points of Disagreement'},
+  'act_sci_cv_evaluate': {section: 'ACT Science', subsection: 'Conflicting Viewpoints', skill_name: 'Evaluating a Position'},
+  'act_sci_cv_weaken': {section: 'ACT Science', subsection: 'Conflicting Viewpoints', skill_name: 'Weakening a Position'},
+  'act_sci_cv_strengthen': {section: 'ACT Science', subsection: 'Conflicting Viewpoints', skill_name: 'Strengthening a Position'},
+  'act_sci_cv_apply': {section: 'ACT Science', subsection: 'Conflicting Viewpoints', skill_name: 'Applying a Viewpoint'},
+};
+
+const CSV_FIELD_MAP = [
+  null,             // Question ID (col A — blank until DB import)
+  'skill_slug',     // col B
+  '__section__',    // col C — derived from SKILL_META
+  '__subsection__', // col D — derived from SKILL_META
+  '__skill_name__', // col E — derived from SKILL_META
+  'difficulty',     // col F
+  'question_type',  // col G
+  'stem',           // col H
+  'option_a',       // col I
+  'option_b',       // col J
+  'option_c',       // col K
+  'option_d',       // col L
+  'correct_answer', // col M
+  'explanation',    // col N
+  'distractor_a',   // col O
+  'distractor_b',   // col P
+  'distractor_c',   // col Q
+  'distractor_d',   // col R
+  'source',         // col S
+  'source_ref',     // col T
+];
+
+function loadQuestions() {
+  const raw = document.getElementById('paste-input').value.trim();
+  const err = document.getElementById('load-error');
+  if (!raw) { err.textContent = 'Nothing pasted yet.'; return; }
+
+  let jsonStr = raw;
+  const m = raw.match(/\[[\s\S]*\]/);
+  if (m) jsonStr = m[0];
+
+  let data;
+  try { data = JSON.parse(jsonStr); }
+  catch(e) { err.textContent = `Parse error: ${e.message}`; return; }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    err.textContent = 'Expected a non-empty JSON array.'; return;
+  }
+
+  questions = data;
+  reviews = questions.map(() => ({
+    decision: null,
+    notesQuestion: '', notesAnswers: '', notesExplanation: '', notesOverall: '',
+    checks: [false,false,false,false,false,false]
+  }));
+  current = 0;
+
+  document.getElementById('upload-screen').style.display = 'none';
+  document.getElementById('review-screen').style.display = 'grid';
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[current];
+  const rev = reviews[current];
+  selectedAnswer = null;
+  answered = false;
+
+  // Progress
+  const done = reviews.filter(r => r.decision).length;
+  document.getElementById('progress-fill').style.width = `${(done / questions.length) * 100}%`;
+  document.getElementById('progress-label').textContent = `${done} / ${questions.length} reviewed`;
+  document.getElementById('q-num').textContent = `Question ${current + 1} of ${questions.length}`;
+
+  // Badges
+  document.getElementById('skill-badge').textContent = q.skill_slug || '';
+  document.getElementById('chip-slug').textContent = q.skill_slug || '';
+  const diffChip = document.getElementById('chip-diff');
+  const diffLabels = {1:'Level 1 — Foundational', 2:'Level 2 — Standard', 3:'Level 3 — Hard'};
+  const diffClasses = {1:'chip-d1', 2:'chip-d2', 3:'chip-d3'};
+  diffChip.textContent = diffLabels[q.difficulty] || `Level ${q.difficulty}`;
+  diffChip.className = `chip ${diffClasses[q.difficulty] || ''}`;
+
+  // Stem
+  document.getElementById('q-stem').textContent = q.stem || '';
+
+  // Options
+  const optionsEl = document.getElementById('options');
+  optionsEl.innerHTML = '';
+  ['a','b','c','d'].forEach(l => {
+    const text = q[`option_${l}`];
+    if (!text) return;
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.dataset.letter = l.toUpperCase();
+    div.innerHTML = `<div class="option-letter">${l.toUpperCase()}</div><div class="option-text">${esc(text)}</div>`;
+    div.onclick = () => selectOption(l.toUpperCase());
+    optionsEl.appendChild(div);
+  });
+
+  // Reset reveal/explanation/distractors
+  document.getElementById('check-btn').classList.remove('visible');
+  document.getElementById('answer-reveal').className = 'answer-reveal';
+  document.getElementById('answer-reveal').textContent = '';
+  document.getElementById('expl-wrap').className = 'explanation-wrap';
+  document.getElementById('dist-wrap').className = 'distractor-wrap';
+  document.getElementById('expl-text').textContent = q.explanation || '';
+
+  // Distractor notes
+  const distEl = document.getElementById('distractors');
+  distEl.innerHTML = '';
+  ['a','b','c','d'].forEach(l => {
+    const note = q[`distractor_${l}`];
+    if (note && note.trim()) {
+      const div = document.createElement('div');
+      div.className = 'distractor-item';
+      div.innerHTML = `<strong>${l.toUpperCase()}:</strong> ${esc(note)}`;
+      distEl.appendChild(div);
+    }
+  });
+
+  // Restore review state
+  // Restore checks
+  const checkItems = document.querySelectorAll('.check-item');
+  checkItems.forEach((item, i) => {
+    if (rev.checks[i]) { item.classList.add('checked'); }
+    else { item.classList.remove('checked'); }
+  });
+
+  // Restore notes
+  document.getElementById('notes-question').value    = rev.notesQuestion || '';
+  document.getElementById('notes-answers').value     = rev.notesAnswers || '';
+  document.getElementById('notes-explanation').value = rev.notesExplanation || '';
+  document.getElementById('notes-overall').value     = rev.notesOverall || '';
+
+  // Restore decision
+  ['approve','revise','reject','reclassify'].forEach(d => {
+    document.getElementById(`btn-${d}`).classList.remove('active');
+  });
+  if (rev.decision) {
+    const map = {'Approved':'approve','Needs revision':'revise','Rejected':'reject','Reclassified':'reclassify'};
+    const btnId = map[rev.decision];
+    if (btnId) document.getElementById(`btn-${btnId}`).classList.add('active');
+  }
+
+  // Nav buttons
+  document.getElementById('btn-prev').disabled = current === 0;
+  document.getElementById('btn-next').textContent = current === questions.length - 1 ? 'Finish →' : 'Next →';
+
+  // Scroll to top
+  document.getElementById('q-panel').scrollTop = 0;
+}
+
+function selectOption(letter) {
+  if (answered) return;
+  selectedAnswer = letter;
+  document.querySelectorAll('.option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.letter === letter);
+  });
+  document.getElementById('check-btn').classList.add('visible');
+}
+
+function checkAnswer() {
+  if (!selectedAnswer || answered) return;
+  answered = true;
+  const q = questions[current];
+  const correct = (q.correct_answer || '').toUpperCase().trim();
+  const reveal = document.getElementById('answer-reveal');
+
+  document.querySelectorAll('.option').forEach(o => {
+    const l = o.dataset.letter;
+    if (l === correct) o.classList.add('revealed-correct');
+    else if (l === selectedAnswer && l !== correct) o.classList.add('incorrect');
+  });
+
+  if (selectedAnswer === correct) {
+    reveal.className = 'answer-reveal show right';
+    reveal.textContent = '✓ Correct — that matches Claude\'s answer key.';
+  } else {
+    reveal.className = 'answer-reveal show wrong';
+    reveal.textContent = `✗ You picked ${selectedAnswer}, Claude's key says ${correct}. If you disagree, that's a flag — mark Needs Revision.`;
+  }
+
+  document.getElementById('check-btn').classList.remove('visible');
+  document.getElementById('expl-wrap').className = 'explanation-wrap show';
+  if (document.getElementById('distractors').children.length > 0) {
+    document.getElementById('dist-wrap').className = 'distractor-wrap show';
+  }
+}
+
+function toggleCheck(item) {
+  item.classList.toggle('checked');
+  const idx = Array.from(document.querySelectorAll('.check-item')).indexOf(item);
+  if (idx >= 0) reviews[current].checks[idx] = item.classList.contains('checked');
+}
+
+function setDecision(decision) {
+  reviews[current].decision = decision;
+  reviews[current].notesQuestion    = document.getElementById('notes-question').value;
+  reviews[current].notesAnswers     = document.getElementById('notes-answers').value;
+  reviews[current].notesExplanation = document.getElementById('notes-explanation').value;
+  reviews[current].notesOverall     = document.getElementById('notes-overall').value;
+  const map = {'Approved':'approve','Needs revision':'revise','Rejected':'reject','Reclassified':'reclassify'};
+  ['approve','revise','reject','reclassify'].forEach(d => {
+    document.getElementById(`btn-${d}`).classList.remove('active');
+  });
+  document.getElementById(`btn-${map[decision]}`).classList.add('active');
+}
+
+function navigate(dir) {
+  // Save notes before navigating
+  reviews[current].notesQuestion    = document.getElementById('notes-question').value;
+  reviews[current].notesAnswers     = document.getElementById('notes-answers').value;
+  reviews[current].notesExplanation = document.getElementById('notes-explanation').value;
+  reviews[current].notesOverall     = document.getElementById('notes-overall').value;
+
+  const next = current + dir;
+  if (next < 0) return;
+  if (next >= questions.length) {
+    showComplete();
+    return;
+  }
+  current = next;
+  renderQuestion();
+}
+
+function showComplete() {
+  document.getElementById('review-screen').style.display = 'none';
+  const cs = document.getElementById('complete-screen');
+  cs.classList.add('show');
+
+  const counts = { Approved: 0, 'Needs revision': 0, Rejected: 0, Reclassified: 0 };
+  reviews.forEach(r => { if (r.decision && counts[r.decision] !== undefined) counts[r.decision]++; });
+
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="summary-card approved"><div class="summary-num">${counts['Approved']}</div><div class="summary-label">Approved</div></div>
+    <div class="summary-card revise"><div class="summary-num">${counts['Needs revision']}</div><div class="summary-label">Needs revision</div></div>
+    <div class="summary-card rejected"><div class="summary-num">${counts['Rejected']}</div><div class="summary-label">Rejected</div></div>
+    <div class="summary-card reclassified"><div class="summary-num">${counts['Reclassified']}</div><div class="summary-label">Reclassified</div></div>`;
+}
+
+function escapeCSV(val) {
+  if (val === null || val === undefined) return '';
+  const s = String(val);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function downloadResults() {
+  const rows = [];
+  questions.forEach((q, i) => {
+    const rev = reviews[i];
+    // Build the data row matching Question Bank columns (col A = blank Question ID)
+    const meta = SKILL_META[q.skill_slug] || {};
+    const dataRow = CSV_FIELD_MAP.map(f => {
+      if (!f) return escapeCSV('');
+      if (f === '__section__')    return escapeCSV(meta.section    || '');
+      if (f === '__subsection__') return escapeCSV(meta.subsection || '');
+      if (f === '__skill_name__') return escapeCSV(meta.skill_name || '');
+      return escapeCSV(q[f] ?? '');
+    }).join(',');
+    const qaStatus   = escapeCSV(rev.decision || 'Pending review');
+    const reviewer   = escapeCSV(document.getElementById('reviewer-name').value.trim() || '');
+    // Combine granular notes into one readable cell
+    const parts = [];
+    if (rev.notesQuestion)    parts.push('Question: '    + rev.notesQuestion.trim());
+    if (rev.notesAnswers)     parts.push('Answer options: ' + rev.notesAnswers.trim());
+    if (rev.notesExplanation) parts.push('Explanation: ' + rev.notesExplanation.trim());
+    if (rev.notesOverall)     parts.push('Overall: '     + rev.notesOverall.trim());
+    const qaNotes = escapeCSV(parts.join(' | '));
+    rows.push(`${dataRow},${qaStatus},${reviewer},${qaNotes}`);
+  });
+
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const slug = questions[0]?.skill_slug || 'questions';
+  const diff = questions[0]?.difficulty || '';
+  a.download = `qa_diff${diff}_${new Date().toISOString().slice(0,10)}_${slug}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function restart() {
+  questions = []; reviews = []; current = 0;
+  document.getElementById('paste-input').value = '';
+  document.getElementById('load-error').textContent = '';
+  document.getElementById('complete-screen').classList.remove('show');
+  document.getElementById('upload-screen').style.display = 'flex';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (document.getElementById('review-screen').style.display === 'none') return;
+  if (e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowRight') { navigate(1); }
+  else if (e.key === 'ArrowLeft') { navigate(-1); }
+  else if (e.key === 'a' || e.key === 'A') { setDecision('Approved'); }
+  else if (e.key === 'v' || e.key === 'V') { setDecision('Needs revision'); }
+  else if (e.key === 'x' || e.key === 'X') { setDecision('Rejected'); }
+  else if (e.key === 'r' || e.key === 'R') { setDecision('Reclassified'); }
+});
+</script>
+</body>
+</html>
