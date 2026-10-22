@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACT Question Generator v16</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --surface: #181c27; --surface2: #1f2436;
+    --border: #2a2f45; --border-bright: #3d4460; --text: #e2e6f0;
+    --muted: #6b738f; --accent: #4f8ef7; --accent-dim: #1e3a6e;
+    --green: #3dd68c; --green-dim: #0d2e1e;
+    --yellow: #f0c040; --yellow-dim: #2e2410;
+    --red: #f05060; --red-dim: #2e0d0d;
+    --mono: "IBM Plex Mono", monospace;
+    --sans: "IBM Plex Sans", sans-serif;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; padding: 32px 24px; }
+
+  .layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; max-width: 1200px; margin: 0 auto; }
+
+  .header { grid-column: 1/-1; display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .header-left { display: flex; align-items: baseline; gap: 14px; }
+  .header h1 { font-family: var(--mono); font-size: 15px; font-weight: 500; letter-spacing: 0.02em; }
+  .header-sub { font-size: 12px; color: var(--muted); font-weight: 300; }
+  .header-steps { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
+  .header-steps span { color: var(--accent); font-weight: 500; }
+
+  .inputs-panel { display: flex; flex-direction: column; }
+  .panel-label { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; padding-bottom: 10px; }
+
+  .field { border: 1px solid var(--border); border-bottom: none; background: var(--surface); transition: border-color 0.15s; }
+  .field:first-of-type { border-radius: 8px 8px 0 0; }
+  .field.last-field { border-bottom: 1px solid var(--border); border-radius: 0 0 8px 8px; }
+  .field:focus-within { border-color: var(--accent); z-index: 1; position: relative; }
+  .field-label { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 14px 3px; }
+  .field input, .field textarea, .field select { width: 100%; background: transparent; border: none; outline: none; font-family: var(--sans); font-size: 13px; color: var(--text); padding: 3px 14px 10px; resize: none; line-height: 1.5; }
+  .field select { cursor: pointer; appearance: none; -webkit-appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b738f' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+  .field select option { background: #1f2436; color: var(--text); }
+  .field textarea { min-height: 64px; }
+  .hint { font-size: 11px; color: var(--muted); padding: 0 14px 8px; font-style: italic; }
+
+  /* Difficulty + count row */
+  .diff-count-wrapper { border: 1px solid var(--border); border-radius: 0 0 8px 8px; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; }
+  .diff-count-cell { background: var(--surface); padding: 10px 14px 14px; }
+  .diff-count-cell:first-child { border-right: 1px solid var(--border); }
+  .diff-count-label { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .diff-count-cell:focus-within { background: var(--surface2); }
+
+  /* Difficulty selector buttons */
+  .diff-btns { display: flex; gap: 6px; }
+  .diff-btn { flex: 1; padding: 7px 4px; border-radius: 5px; border: 1px solid var(--border); background: transparent; font-family: var(--mono); font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.15s; color: var(--muted); }
+  .diff-btn:hover { border-color: var(--border-bright); color: var(--text); }
+  .diff-btn.active-1 { background: #0d2e1e; border-color: #3dd68c; color: #3dd68c; }
+  .diff-btn.active-2 { background: #2e2410; border-color: #f0c040; color: #f0c040; }
+  .diff-btn.active-3 { background: #2e0d0d; border-color: #f05060; color: #f05060; }
+
+  .count-input { width: 100%; background: transparent; border: none; outline: none; font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--text); text-align: center; }
+
+  /* Definition display */
+  .def-panel { margin-top: 14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .def-header { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .def-body { padding: 12px 14px; min-height: 52px; }
+  .def-empty { font-size: 11px; color: var(--muted); font-style: italic; }
+  .def-error { font-size: 11px; color: var(--red); font-style: italic; }
+  .def-level-tag { font-family: var(--mono); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+  .def-level-tag.l1 { color: #3dd68c; }
+  .def-level-tag.l2 { color: #f0c040; }
+  .def-level-tag.l3 { color: #f05060; }
+  .def-text { font-size: 12px; color: var(--text); line-height: 1.6; }
+
+  .status-bar { display: flex; gap: 16px; padding-top: 12px; font-family: var(--mono); font-size: 10px; color: var(--muted); align-items: center; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+  .dot-ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-missing { background: var(--red); }
+
+  .reset-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-family: var(--mono); font-size: 10px; padding: 6px 12px; border-radius: 5px; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; transition: all 0.15s; margin-top: 12px; }
+  .reset-btn:hover { border-color: var(--border-bright); color: var(--text); }
+
+  .prompt-panel { display: flex; flex-direction: column; }
+  .prompt-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; }
+  .copy-btn { display: flex; align-items: center; gap: 7px; background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: all 0.15s; text-transform: uppercase; }
+  .copy-btn:hover { background: var(--accent); color: #fff; }
+  .copy-btn.copied { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .copy-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  .prompt-box { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 22px; font-family: var(--mono); font-size: 11.5px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; overflow-y: auto; min-height: 520px; max-height: 700px; }
+  .pf { color: var(--accent); font-weight: 500; }
+  .pe { color: var(--red); font-style: italic; }
+  .pm { color: var(--muted); }
+  .pd1 { color: #3dd68c; font-weight: 500; }
+  .pd2 { color: #f0c040; font-weight: 500; }
+  .pd3 { color: #f05060; font-weight: 500; }
+  /* Step 4: output checks */
+  .check-panel { grid-column: 1/-1; margin-top: 12px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .check-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .check-help { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .check-ta { width: 100%; min-height: 140px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 11px; padding: 10px 12px; resize: vertical; outline: none; }
+  .check-ta:focus { border-color: var(--accent); }
+  .check-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .check-results { font-size: 12px; line-height: 1.6; display: flex; flex-direction: column; gap: 6px; }
+  .chk-sum { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .chk-item { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; }
+  .chk-q { font-weight: 500; margin-bottom: 2px; }
+  .chk-err { color: var(--red); }
+  .chk-warn { color: var(--yellow); }
+  .chk-ok { color: var(--green); }
+  @media (max-width: 900px) { .layout, .check-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <div class="header">
+    <div class="header-left">
+      <h1>ACT Question Generator</h1>
+      <span class="header-sub">Prompt builder for Claude</span>
+    </div>
+    <div class="header-steps">
+      <span>1</span> Fill fields &nbsp;·&nbsp;
+      <span>2</span> Check the definition &nbsp;·&nbsp;
+      <span>3</span> Copy &amp; paste into Claude &nbsp;·&nbsp;
+      <span>4</span> Check the output
+    </div>
+  </div>
+
+  <!-- LEFT: inputs -->
+  <div class="inputs-panel">
+    <div class="panel-label">Session fields</div>
+
+    <div class="field">
+      <div class="field-label">Section</div>
+      <select id="in-section" onchange="update()">
+        <option value="">— select —</option>
+        <option>ACT English</option>
+        <option>ACT Math</option>
+        <option>ACT Reading</option>
+        <option>ACT Science</option>
+      </select>
+    </div>
+    <div class="field">
+      <div class="field-label">Skill slug</div>
+      <input type="text" id="in-slug" placeholder="act_eng_clause_ic_ic_splice" oninput="update()" autocomplete="off" spellcheck="false"/>
+      <div class="hint">Taxonomy sheet — column E</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Skill name</div>
+      <input type="text" id="in-name" placeholder="IC + IC: comma splice (error recognition)" oninput="update()"/>
+      <div class="hint">Taxonomy sheet — column D</div>
+    </div>
+    <div class="field last-field">
+      <div class="field-label">Skill description</div>
+      <textarea id="in-desc" rows="3" placeholder="Two ICs joined by only a comma; identifying and correcting the comma splice" oninput="update()"></textarea>
+      <div class="hint">Taxonomy sheet — column E (Description / Scope Note)</div>
+    </div>
+
+    <!-- Difficulty + count -->
+    <div style="border:1px solid var(--border); border-top:none; background:var(--surface); padding:10px 14px 6px; border-radius:0;">
+      <div class="diff-count-label" style="font-family:var(--mono);font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Difficulty level</div>
+      <div class="diff-btns">
+        <button class="diff-btn" id="btn-1" onclick="setLevel(1)">1 — Foundational</button>
+        <button class="diff-btn" id="btn-2" onclick="setLevel(2)">2 — Standard</button>
+        <button class="diff-btn" id="btn-3" onclick="setLevel(3)">3 — Hard</button>
+      </div>
+    </div>
+    <div class="diff-count-wrapper">
+      <div class="diff-count-cell" style="border-radius:0 0 0 8px;">
+        <div class="diff-count-label">Number of questions</div>
+        <input class="count-input" type="number" id="in-count" value="9" min="1" max="30" oninput="update()"/>
+      </div>
+      <div class="diff-count-cell" style="border-radius:0 0 8px 0; display:flex; flex-direction:column; justify-content:center;">
+        <div class="diff-count-label" style="margin-bottom:4px;">Recommended</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);">9 per skill level</div>
+      </div>
+    </div>
+
+    <!-- Answer sequence -->
+    <div style="margin-top:14px;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <div style="font-family:var(--mono);font-size:10px;font-weight:500;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span>Answer sequence</span>
+        <button onclick="reshuffleSequence()" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:4px;cursor:pointer;letter-spacing:0.04em;transition:all 0.15s;"
+          onmouseover="this.style.borderColor='var(--border-bright)';this.style.color='var(--text)'"
+          onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">↺ Reshuffle</button>
+      </div>
+      <div style="padding:10px 14px;background:var(--surface);">
+        <div id="seq-display" style="font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:0.15em;color:var(--text);margin-bottom:4px;"></div>
+        <div style="font-size:11px;color:var(--muted);font-style:italic;">Claude will write each question so the specified letter is correct. Reshuffle for a new sequence.</div>
+      </div>
+    </div>
+
+    <!-- Definition panel -->
+    <div class="def-panel">
+      <div class="def-header">Definition for selected level</div>
+      <div class="def-body" id="def-body">
+        <div class="def-empty">Enter a slug and select a difficulty level.</div>
+      </div>
+    </div>
+
+    <div class="status-bar" id="status-bar"></div>
+    <button class="reset-btn" onclick="resetFields()">Clear fields</button>
+  </div>
+
+  <!-- RIGHT: prompt -->
+  <div class="prompt-panel">
+    <div class="prompt-header">
+      <div class="panel-label">Generated prompt</div>
+      <button class="copy-btn" id="copy-btn" onclick="copyPrompt()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+          <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"/>
+        </svg>
+        Copy prompt
+      </button>
+    </div>
+    <div class="prompt-box" id="prompt-box"></div>
+  </div>
+
+  <!-- BOTTOM: output checks -->
+  <div class="check-panel">
+    <div class="panel-label">Step 4: check the output</div>
+    <div class="check-grid">
+      <div class="check-col">
+        <div class="check-help">Paste the JSON Claude returned. The checks flag the problems the October 2026 revision found most often: duplicate or out-of-order options, draft text, letter references, named-rule openers, long notes and explanations, "; and", missing NO CHANGE, and a lopsided answer key. Keep the same section and answer sequence selected while you check.</div>
+        <textarea id="check-input" class="check-ta" placeholder='[{"skill_slug": "...", "stem": "...", ...}]' spellcheck="false"></textarea>
+        <div class="check-btns">
+          <button class="copy-btn" onclick="runChecks()">Run checks</button>
+          <button class="copy-btn" id="blind-btn" onclick="copyBlindPrompt()">Copy blind-solve prompt</button>
+        </div>
+        <textarea id="blind-fallback" class="check-ta" style="display:none" readonly></textarea>
+        <div id="check-results" class="check-results"></div>
+      </div>
+      <div class="check-col">
+        <div class="check-help">Blind solve: paste the blind-solve prompt into a <b>new</b> chat (one that has not seen the keys). Paste its answers here and compare. Every mismatch needs a person to decide which answer is right; in the revision, this step found wrong keys that every other check missed.</div>
+        <textarea id="blind-input" class="check-ta" placeholder='[{"n": 1, "answer": "B", "flag": ""}, ...]' spellcheck="false"></textarea>
+        <div class="check-btns"><button class="copy-btn" onclick="compareBlind()">Compare with keys</button></div>
+        <div id="blind-results" class="check-results"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SKILL_DEFS = {
+  'act_eng_clause_id': {l1: 'Identify whether a short clause is independent or dependent. Use only TWO answer choices: "Independent" and "Dependent" — do not generate four options for this skill at L1. The clause must have a clear subordinator if dependent. Explanation must be short: state the rule ("An independent clause has a subject and verb and can stand alone. A dependent clause has a subordinating conjunction and cannot stand alone.") and apply it to the specific clause in one sentence. Do not write a paragraph.', l2: 'Classify clauses in a compound sentence where one clause has an embedded phrase that could be mistaken for the main verb. Two answer choices only: "Independent" and "Dependent."', l3: 'Determine clause type in a complex sentence where an inverted structure or unusual subordinator obscures the subject-verb relationship. Two answer choices only: "Independent" and "Dependent."'},
+  'act_eng_clause_ic_ic_fanboys': {l1: 'Add a missing comma before a FANBOYS conjunction joining two short, obvious independent clauses. Write the sentence so that only the comma+FANBOYS option is correct — do not offer a semicolon or period as a distractor if either would also fix the sentence correctly. Wrong answers must be genuinely wrong in context: e.g., omitting the comma entirely (creating a splice), or replacing the conjunction with a semicolon that drops the logical relationship the conjunction provides.', l2: 'Choose the correct punctuation before a FANBOYS conjunction where one clause contains an internal comma that could be mistaken for the clause-joining comma. The correct answer is comma+FANBOYS. Distractors must be wrong in context, not just different valid fixes — e.g., the comma moved to after the conjunction, no comma before the conjunction (splice), or a transitional adverb without correct surrounding punctuation.', l3: 'Identify the comma+FANBOYS option as correct when a semicolon+transitional adverb is offered as a tempting distractor — but the transitional adverb must be subtly wrong because it changes the logical relationship between the clauses (e.g., "however" where "so" is needed). The question tests whether the student recognizes that grammatical correctness alone is not enough — the conjunction must preserve the intended meaning.'},
+  'act_eng_clause_ic_ic_semicolon': {l1: 'Semicolon vs. comma at a clause boundary in a short sentence. Across the batch the semicolon is correct on about 40% of items. Where it is correct, two independent clauses with no conjunction are joined and no other offered option also works (no period, no ", and"). Where it is wrong, the semicolon sits before a phrase or a dependent clause, and the correct answer is a comma or no punctuation.', l2: 'Semicolon vs. comma where one side may or may not be an independent clause (a long participial phrase, or a dependent clause that sounds complete). The semicolon is correct on about 40% of the batch; where it is wrong, the correct answer is a comma or no punctuation.', l3: 'Semicolon with a conjunctive adverb ("; however,") vs. a comma splice with the same adverb, or a semicolon placed inside a single clause or before a dependent clause. The semicolon is correct on about 40% of the batch. Never offer a semicolon followed by a coordinating conjunction ("; and").'},
+  'act_eng_clause_ic_ic_splice': {l1: 'NO CHANGE is a comma splice. The correct answer fixes it. Write the sentence so that exactly one answer choice is correct — choose either a semicolon fix OR a comma+FANBOYS fix as the correct answer, and make the other wrong in context (e.g., if the correct fix is a semicolon, do not include comma+FANBOYS as a distractor since it would also be correct; instead use a colon or dash that is wrong in context, a fused sentence, or a comma + conjunctive adverb; never offer a period alongside a semicolon, since both would be correct). The fused sentence option (remove all punctuation) is acceptable as a distractor only if the resulting sentence is clearly wrong.', l2: 'NO CHANGE is a comma splice in a longer sentence where the second clause begins mid-thought and feels like a natural continuation, making the splice harder to spot. The correct answer is a specific fix — either semicolon or comma+FANBOYS, not both. Write the sentence and options so that only one fix works: if the correct answer is a semicolon, the comma+FANBOYS distractor must use a conjunction that changes the logical relationship; if the correct answer is comma+FANBOYS, the semicolon distractor must be paired with a transitional adverb that shifts the meaning.', l3: 'The sentence contains either a comma splice or correct punctuation — the student must determine which. The trap is a nonrestrictive clause or a long introductory phrase that makes the comma feel correct when it is actually a splice, or vice versa. Distractors must exploit genuine ambiguity about where the clause boundary falls, not just offer alternative valid fixes.'},
+  'act_eng_clause_ic_ic_fused': {l1: 'NO CHANGE is a fused sentence — two independent clauses with no punctuation between them. The correct answer adds punctuation to fix it. Choose one specific correct fix (semicolon, or comma+FANBOYS with a named conjunction) and write the other options so they are wrong in context — e.g., a comma alone (splice), a colon that is wrong in context, or a conjunction without a comma. Do not offer multiple options that each correctly fix the fused sentence.', l2: 'NO CHANGE is a fused sentence where a transitional adverb (e.g., "however," "therefore") appears mid-sentence without any punctuation before it. The correct answer places a semicolon before the transitional adverb and a comma after it. Wrong answers must exploit the specific error: e.g., only a comma before the transitional adverb (splice), a period before it but no comma after (missing comma after transitional adverb), or omitting the transitional adverb entirely and using a semicolon alone.', l3: 'The sentence is either a fused sentence or a correctly written compound predicate — the student must determine which. The trap is that the two verbs share a subject, which means no punctuation is needed if it is a compound predicate, but punctuation is required if the second verb has its own expressed subject. Distractors must offer punctuation that would be correct for a fused sentence but wrong for a compound predicate, and vice versa.'},
+  'act_eng_clause_ic_ic_transitional': {l1: 'The underlined portion contains a transitional adverb (e.g., "however," "therefore," "thus") joining two independent clauses. NO CHANGE is wrong. The correct answer is semicolon before the transitional adverb and comma after it. Wrong answers must exploit the specific punctuation errors students make: e.g., comma before + comma after (splice), no punctuation before + comma after (fused), or semicolon before + no comma after (missing the comma after the transitional adverb). Do not offer a comma+FANBOYS option since that structure does not apply when a transitional adverb is used.', l2: 'The underlined portion contains a transitional adverb where the preceding clause is long enough that the clause boundary is not immediately obvious. The correct punctuation is semicolon + transitional adverb + comma. The trap is that the transitional adverb could be mistaken for a subordinator, making students omit the semicolon entirely or place only a comma. Wrong answers must target these specific errors — do not include comma+FANBOYS options that would require replacing the transitional adverb.', l3: 'The transitional adverb appears mid-sentence in a position where it could be: (a) correctly punctuated as a clause joiner (semicolon before, comma after), (b) incorrectly treated as a parenthetical within one clause (paired commas, no semicolon), or (c) incorrectly treated as starting a new sentence (period before, comma after). All three patterns are offered as options. The student must identify which clause structure is actually present — whether the transitional adverb is joining two ICs or interrupting a single one.'},
+  'act_eng_clause_dc_ic_nocomma': {l1: 'Remove an unnecessary comma before a dependent clause that follows the main clause (IC + DC order).', l2: 'Identify that no comma is needed when a short adverbial clause follows a longer main clause ending with a prepositional phrase.', l3: 'Distinguish the IC+DC (no comma) pattern from a sentence where a nonrestrictive phrase that looks like a dependent clause does require a comma.'},
+  'act_eng_clause_ic_dc_comma': {l1: 'NO CHANGE is missing a comma after a short introductory dependent clause (e.g., "Because it rained the game was cancelled"). The correct answer adds the comma in the right place. Realistic wrong answers: (A) NO CHANGE — student does not hear the missing comma in speech; (B) a semicolon after the dependent clause — student knows punctuation is needed but misidentifies the clause as independent; (C) a comma in the wrong position within the dependent clause — student adds punctuation but places it too early. Do not use a FANBOYS conjunction as a distractor — no student would plausibly replace a subordinator with a coordinating conjunction here.', l2: 'Place the comma correctly after a long dependent clause where an internal phrase makes the clause boundary less obvious. The trap is that the dependent clause contains a noun phrase that reads like it could be the subject of the main clause, tempting students to place the comma too early or omit it. Distractors: (A) NO CHANGE; (B) comma placed after the embedded phrase rather than the full dependent clause; (C) semicolon placed at the clause boundary.', l3: 'The introductory element begins with an unusual subordinator (e.g., "Given that," "Provided that," "Insofar as") that students may not recognize as creating a dependent clause. The trap is that students treat the subordinator as a transitional adverb and punctuate accordingly (semicolon or no comma) or omit the comma entirely because the opening does not feel like a typical "Because/When/Although" opener.'},
+  'act_eng_clause_subordinator': {l1: 'Choose between \'although\' and \'because\' to express a clear contrast or cause relationship.', l2: 'Select the subordinator that correctly expresses a conditional or temporal relationship when \'since\', \'while\', and \'unless\' are all offered.', l3: 'Choose the subordinator that preserves the logical relationship between clauses when the meaning difference between options is subtle (e.g., \'while\' vs. \'whereas\').'},
+  'act_eng_clause_fragment_dc': {l1: 'Identify a dependent clause punctuated as a sentence (\'Although she studied.\').', l2: 'Recognize a fragment where the dependent clause is long enough that the missing main clause is easy to overlook.', l3: 'Distinguish a dependent-clause fragment from a correctly punctuated absolute phrase or participial phrase that can stand in a similar position.'},
+  'act_eng_clause_fragment_sv': {l1: 'Identify a phrase missing a finite verb punctuated as a complete sentence.', l2: 'Recognize a fragment where a participial phrase is mistaken for a full predicate.', l3: 'Distinguish a noun-phrase fragment from a correctly written inverted sentence where the subject follows the verb.'},
+  'act_eng_clause_relative': {l1: 'Choose \'who\' vs. \'which\' for a simple relative clause modifying a clearly human or non-human noun.', l2: 'Determine whether \'that\' or \'which\' is correct based on whether the relative clause is restrictive or non-restrictive.', l3: 'Select the correct relative pronoun and punctuation when the antecedent is ambiguous or the clause structure is inverted.'},
+  'act_eng_nonrest_appositive': {l1: 'Add paired commas around a short appositive renaming an obvious proper noun.', l2: 'Punctuate an appositive correctly when it contains an internal comma or modifier that could disrupt the paired-comma rule.', l3: 'Determine whether a noun phrase is an appositive requiring commas or a restrictive identifier requiring none, based on context.'},
+  'act_eng_nonrest_clause_comma': {l1: 'Add paired commas around a short \'which\' clause that clearly adds non-essential information.', l2: 'Distinguish a non-restrictive \'which\' clause from a restrictive \'that\' clause in a sentence where both options sound natural.', l3: 'Determine whether a relative clause following a proper noun is truly non-restrictive or provides essential identification requiring no commas.'},
+  'act_eng_nonrest_emdash': {l1: 'Close a nonrestrictive phrase that opens with a dash with a matching dash (not a comma) in a short sentence.', l2: 'Match the punctuation that closes a long nonrestrictive interruption to the punctuation that opens it (dash with dash, comma with comma).', l3: 'Determine whether an em dash or colon is correct when a nonrestrictive element ends the sentence and introduces an explanation.'},
+  'act_eng_nonrest_restrict_choice': {l1: 'Determine whether a simple modifier is essential or non-essential by removing it and checking if meaning changes.', l2: 'Apply the restrictive/non-restrictive distinction when the modifier is a long participial phrase rather than a single adjective.', l3: 'Identify whether a relative clause after a generic noun (not a proper noun) is restrictive or non-restrictive based solely on context and intended meaning.'},
+  'act_eng_punc_intro': {l1: 'Add a comma after a short introductory prepositional phrase (\'In the morning,\').', l2: 'Determine whether a comma is needed after a longer introductory phrase that could be misread as part of the subject.', l3: 'Decide whether a comma is needed after an introductory element that is grammatically optional but changes emphasis if removed.'},
+  'act_eng_punc_series': {l1: 'Add the missing serial comma in a three-item list with a clear conjunction.', l2: 'Identify an extra or missing comma in a four-item list where items vary in length.', l3: 'Determine correct comma usage in a list where one item contains an \'and\' internally, making the list boundaries ambiguous.'},
+  'act_eng_punc_semicolon_series': {l1: 'Replace commas with semicolons in a list where one item contains an internal comma.', l2: 'Identify where semicolons are needed in a complex list where only some items have internal commas.', l3: 'Distinguish a correctly punctuated complex list using semicolons from one where commas would suffice because no items contain internal commas.'},
+  'act_eng_punc_colon': {l1: 'Insert a colon after a complete independent clause that introduces a short list.', l2: 'Determine whether a colon or dash is correct to introduce a list after a clause that ends with a verb.', l3: 'Identify an incorrectly placed colon that interrupts a verb-object relationship, requiring removal rather than replacement.'},
+  'act_eng_punc_apos_possessive': {l1: 'Add an apostrophe to form a singular possessive (\'the student\'s essay\').', l2: 'Choose correctly between singular and plural possessive when the noun could be either (\'the teachers\' vs. \'the teacher\'s\').', l3: 'Form the possessive of an irregular plural noun (\'children\'s\', \'women\'s\') or a plural family name. Do not test singular names ending in s, where two styles are accepted.'},
+  'act_eng_punc_apos_contraction': {l1: 'Choose between \'its\' and \'it\'s\' in a sentence with a clear possessive or contraction context.', l2: 'Distinguish \'their/they\'re/there\' in a sentence where context requires careful reading to determine meaning.', l3: 'Select the correct form among \'whose/who\'s\' or \'your/you\'re\' in a complex clause where the grammatical role of the word is embedded.'},
+  'act_eng_punc_intrusive': {l1: 'Remove a comma that incorrectly separates a subject from its verb in a short sentence.', l2: 'Identify an intrusive comma between a verb and its direct object in a longer sentence where the comma feels natural due to sentence length.', l3: 'Determine whether a comma between a preposition and its object is intrusive or correctly sets off a nonrestrictive modifier.'},
+  'act_eng_agr_sv_basic': {l1: 'Match a clearly singular or plural subject with the correct verb form in a short sentence.', l2: 'Choose the correct verb when the subject is a compound joined by \'or/nor\' requiring singular agreement.', l3: 'Identify the correct verb when the grammatical subject is a singular noun clause or gerund phrase that sounds plural.'},
+  'act_eng_agr_sv_intervening': {l1: 'Choose the correct verb when a short prepositional phrase separates a simple subject from the verb.', l2: 'Maintain agreement when a long intervening relative clause contains a plural noun that distracts from the singular subject.', l3: 'Select the correct verb when multiple intervening phrases create ambiguity about whether the subject is the noun before or inside the phrase.'},
+  'act_eng_agr_sv_inverted': {l1: 'Correct the verb in a short \'there is/are\' sentence with a clearly singular or plural subject.', l2: 'Choose the verb in an inverted sentence where a prepositional phrase precedes the verb and the subject follows.', l3: 'Maintain agreement in an inverted sentence where the delayed subject is a compound noun phrase that could be read as singular.'},
+  'act_eng_agr_sv_compound': {l1: 'Use a plural verb with a compound subject joined by \'and\'.', l2: 'Select the singular verb when a compound subject joined by \'or/nor\' has a singular noun closer to the verb.', l3: 'Determine verb number when a compound subject includes both singular and plural nouns joined by \'neither/nor\'.'},
+  'act_eng_agr_sv_collective': {l1: 'Treat \'the team\' as singular in a sentence where collective action is clearly described.', l2: 'Choose between singular and plural verb for \'the committee\' based on whether members act as a unit or individually.', l3: 'Identify the correct verb for an unusual collective noun that students may not recognize as collective.'},
+  'act_eng_agr_pro_number': {l1: 'Replace a plural pronoun with a singular one to match a clearly singular antecedent.', l2: 'Choose the correct pronoun number when the antecedent is a collective noun or indefinite pronoun like \'everyone\'.', l3: 'Maintain pronoun agreement across multiple clauses when the antecedent appears several words before the pronoun.'},
+  'act_eng_agr_pro_gender': {l1: 'Use \'they/their\' with a singular indefinite antecedent like \'anyone\' in a clear context.', l2: 'Choose the correct gender-neutral pronoun when the antecedent is a role title that students may default to gendering.', l3: 'Select the grammatically correct pronoun when both gender-neutral and gendered forms appear as options and context makes the choice subtle.'},
+  'act_eng_agr_pro_case': {l1: 'Choose \'I\' vs. \'me\' as subject or object in a simple sentence.', l2: 'Select the correct pronoun case in a compound subject or object (\'between her and me\') where students often default to subjective case.', l3: 'Determine pronoun case in an elliptical clause (\'She studies harder than he/him\') where the implied verb drives the answer.'},
+  'act_eng_agr_pro_who': {l1: 'Choose \'who\' as subject or \'whom\' as object in a simple question.', l2: 'Select \'who\' or \'whom\' in a relative clause where the pronoun is the object of a preposition at the end of the clause.', l3: 'Determine \'who\' or \'whom\' in a complex embedded clause where rearranging the clause is required to identify grammatical role.'},
+  'act_eng_agr_pro_ambiguous': {l1: 'Identify a pronoun with two possible antecedents and select the clearest rewrite.', l2: 'Recognize ambiguous pronoun reference where the two possible antecedents are the same gender and grammatical role.', l3: 'Choose the revision that eliminates ambiguity without introducing wordiness or changing meaning.'},
+  'act_eng_ss_parallel_list': {l1: 'Fix a list where one item uses a gerund and the others use infinitives.', l2: 'Identify the non-parallel item in a four-element list where the mismatch is subtle (noun vs. gerund).', l3: 'Correct a list where parallelism is broken by a clause mixed into a series of phrases, requiring restructuring.'},
+  'act_eng_ss_parallel_compare': {l1: 'Make a simple \'more X than Y\' comparison parallel by matching grammatical forms.', l2: 'Correct a comparison where the second element uses a clause while the first uses a noun phrase.', l3: 'Fix a comparison in a long sentence where the non-parallel element is separated from the comparison word by several words.'},
+  'act_eng_ss_parallel_correlative': {l1: 'Balance a simple \'both X and Y\' structure with matching grammatical forms.', l2: 'Correct \'not only X but also Y\' where X is a verb phrase and Y is a noun phrase.', l3: 'Fix a \'either/or\' structure embedded in a longer sentence where the correlative pair spans clauses.'},
+  'act_eng_ss_dangling': {l1: 'Identify a dangling participle at the start of a sentence where the subject performing the action is absent.', l2: 'Recognize a dangling modifier in the middle of a sentence where the intended referent is in an adjacent clause.', l3: 'Distinguish a dangling modifier from a correctly written absolute phrase that intentionally lacks a specific subject.'},
+  'act_eng_ss_misplaced': {l1: 'Move a misplaced adverb or adjective phrase to sit directly before the noun it modifies.', l2: 'Correct a misplaced relative clause where moving it requires restructuring more than one phrase.', l3: 'Fix a modifier that could logically modify two different nouns, requiring contextual judgment to determine correct placement.'},
+  'act_eng_vf_tense_consistency': {l1: 'Correct an obvious tense shift from past to present in a short passage narrating a past event.', l2: 'Identify an illogical tense shift in a longer paragraph where the context establishes the timeline across multiple sentences.', l3: 'Determine whether a tense shift is illogical or intentional (e.g., a historical present mid-narrative) based on subtle contextual cues.'},
+  'act_eng_vf_tense_sequence': {l1: 'Replace simple past with past perfect in a sentence that clearly describes an action completed before another past event.', l2: 'Choose between simple past and past perfect in a sentence where the chronological order is implied rather than stated.', l3: 'Select the correct tense in a complex sentence with multiple clauses describing events at different points in a timeline.'},
+  'act_eng_vf_ing_inf': {l1: 'Choose the gerund or infinitive after a verb that strictly requires one form (\'enjoy + gerund\').', l2: 'Select between gerund and infinitive after a verb that changes meaning depending on which follows (\'stop + gerund vs. infinitive\').', l3: 'Choose the gerund or infinitive when the verb that controls the form is separated from it by an intervening phrase.'},
+  'act_eng_vf_irregular': {l1: 'Choose the past participle of a common irregular verb after a helping verb (\'had ran\' → \'had run\'). Do not use invented forms nobody writes (\'goed\', \'buyed\').', l2: 'Choose between the past tense and past participle of a confusable irregular verb (\'lay/laid/lain\').', l3: 'Correctly use \'lie\' vs. \'lay\' in a sentence requiring the past tense, where the forms of both verbs overlap.'},
+  'act_eng_vf_subjunctive': {l1: 'Use \'were\' instead of \'was\' in a simple hypothetical (\'If I were you\').', l2: 'Apply the subjunctive after a verb of requirement or recommendation in a \'that\' clause (\'It is essential that he be present\').', l3: 'Identify the subjunctive as necessary in an embedded clause where the main verb is several words removed from the subjunctive trigger.'},
+  'act_eng_wc_confused': {l1: 'Choose between \'affect\' and \'effect\' in a sentence with a clear cause-and-effect relationship.', l2: 'Select the correct member of a confusable pair (\'fewer/less\', \'number/amount\') in a context requiring careful reading.', l3: 'Distinguish a confusable pair (\'affect/effect\', \'complement/compliment\', \'imply/infer\') in a longer sentence where both words seem to fit. Avoid usage points authorities disagree on (\'comprised of\').'},
+  'act_eng_wc_redundancy': {l1: 'Remove an obviously redundant phrase (\'small in size\' → \'small\').', l2: 'Identify redundancy in a longer sentence where the repeated idea appears in different words and is less immediately obvious.', l3: 'Determine whether apparent redundancy is a genuine error or intentional emphasis, based on the author\'s tone.'},
+  'act_eng_wc_empty': {l1: 'Replace \'due to the fact that\' with \'because\' without changing meaning.', l2: 'Simplify a wordy construction where multiple empty phrases are stacked in one sentence.', l3: 'Choose the most concise option when all alternatives are grammatically correct and vary only in degree of wordiness.'},
+  'act_eng_wc_concision': {l1: 'Select the shortest option that preserves the complete meaning of a short sentence.', l2: 'Choose between two concise options where one is slightly longer but adds useful specificity.', l3: 'Identify the most concise option in a set where the shortest choice omits necessary information and the correct answer is not the briefest.'},
+  'act_eng_wc_tone': {l1: 'Replace obviously informal language (\'kids\' → \'children\') in a formal academic passage.', l2: 'Identify a tonal mismatch in a word that fits grammatically but is too formal or too casual for the passage\'s register.', l3: 'Choose between two formally correct options where the distinction is subtle connotation rather than register.'},
+  'act_eng_org_trans_sentence': {l1: 'Replace \'however\' with \'therefore\' (or vice versa) where the logical relationship is clearly contrast or consequence.', l2: 'Choose the correct transitional adverb when three plausible options share similar but distinct logical meanings.', l3: 'Determine whether to add, change, or delete a transition when the logical relationship between sentences is implied rather than stated.'},
+  'act_eng_org_trans_para': {l1: 'Identify a transition sentence that correctly signals a shift from one main idea to another. Give a short two-paragraph excerpt, not a summary of the next paragraph.', l2: 'Choose the transition that accurately reflects the relationship between two paragraphs with complex and related ideas.', l3: 'Determine the best transition when the passage structure is circular and multiple logical relationships exist between paragraphs.'},
+  'act_eng_org_sentence_place': {l1: 'Place a sentence about a specific detail immediately after the sentence that introduces that detail\'s topic.', l2: 'Determine the best placement for a sentence that relates to multiple surrounding sentences and could logically fit in two locations.', l3: 'Place a sentence that must create a logical bridge between two paragraphs without disrupting the flow of either.'},
+  'act_eng_org_relevance_add': {l1: 'Identify which sentence best supports a paragraph\'s clearly stated main idea.', l2: 'Choose the most relevant supporting detail when multiple options are topically related but only one directly supports the paragraph\'s specific claim.', l3: 'Determine relevance when the paragraph\'s main idea is implied rather than stated explicitly.'},
+  'act_eng_org_relevance_del': {l1: 'Delete a sentence that introduces an entirely new topic not related to the paragraph.', l2: 'Identify a sentence that is topically related to the paragraph but undermines rather than supports its argument.', l3: 'Determine whether a sentence should be deleted when it provides interesting context but shifts focus from the passage\'s central argument.'},
+  'act_eng_org_open_close': {l1: 'Choose an opening sentence that introduces the paragraph\'s main topic without being too specific or too broad.', l2: 'Select a closing sentence that synthesizes the paragraph\'s ideas without simply restating the opening.', l3: 'Choose an opening or closing sentence that must also serve as a transition to the adjacent paragraph.'},
+  'act_eng_org_goal': {l1: 'Determine whether a simple revision accomplishes a clearly stated goal (e.g., \'adds a specific example\').', l2: 'Evaluate whether a revision accomplishes a goal that requires balancing two criteria (e.g., \'adds detail without changing tone\').', l3: 'Determine whether a revision accomplishes a goal when the goal is abstract (e.g., \'strengthens the author\'s argument\') and requires evaluating the revision\'s effect on the whole passage.'},
+  'act_mth_pre_pemdas': {l1: 'Evaluate a simple expression with one set of parentheses and one exponent in the correct order. Vary the operations used across a batch — include addition, subtraction, multiplication, and division. Vary the exponent used (not just squaring — include cubing or square roots). Include expressions with negative numbers. Do not generate a full batch using only addition and squaring.', l2: 'Simplify an expression with nested parentheses, an exponent, and multiple operations where order matters. Include division and negative numbers across the batch.', l3: 'Evaluate a multi-step expression where a common error order produces a tempting wrong answer. May include fractions, mixed operations, and square roots.'},
+  'act_mth_pre_integers': {l1: 'Add or subtract two negative numbers in a straightforward calculation.', l2: 'Evaluate an expression combining multiplication and addition of signed numbers with a negative outside a parenthesis.', l3: 'Simplify a multi-step signed-number expression where distributing a negative sign is easy to miss.'},
+  'act_mth_pre_frac_ops': {l1: 'Add two fractions with the same denominator.', l2: 'Multiply a mixed number by a fraction, requiring conversion before multiplying.', l3: 'Divide a fraction by a mixed number in a multi-step problem where inverting the divisor is easily forgotten.'},
+  'act_mth_pre_frac_simplify': {l1: 'Reduce a simple fraction to lowest terms by identifying the GCF.', l2: 'Compare fractions with different denominators to determine relative size. This includes identifying which of two or more fractions is greatest, ordering a set of fractions from least to greatest, and identifying which fraction lies between two given values. Do not write a direct two-value "which is greater?" question — use a format that naturally produces four distinct answer choices (e.g., "which of these four fractions is greatest?", "which fraction lies between X and Y?", "which ordering is correct?").', l3: 'Convert between improper fractions and mixed numbers within a problem that requires both forms.'},
+  'act_mth_pre_decimals': {l1: 'Multiply a decimal by a whole number and place the decimal point correctly.', l2: 'Divide two decimals where students must track decimal places in both dividend and divisor.', l3: 'Solve a word problem requiring multiple decimal operations where a place-value error produces a plausible wrong answer. Note: students can use a calculator on ACT Math. Decimal questions must test conceptual understanding and problem setup, not arithmetic execution. Distractors should reflect setup errors (e.g. misplacing the decimal point conceptually, using the wrong operation, misidentifying which quantity is the divisor) — not errors a calculator would prevent.'},
+  'act_mth_pre_ratios': {l1: 'Find the missing value in a simple ratio given one part and the total.', l2: 'Set up and solve a ratio problem from a word problem with three quantities.', l3: 'Solve a rate problem requiring unit conversion and ratio setup in a multi-step context.'},
+  'act_mth_pre_proportions': {l1: 'Solve a simple proportion with one unknown by cross-multiplying.', l2: 'Set up and solve a proportion from a word problem where the units require alignment.', l3: 'Identify which of two quantities forms the correct proportion in a problem where an incorrect setup yields a tempting answer.'},
+  'act_mth_pre_pct_convert': {l1: 'Convert a simple percent to a decimal or fraction.', l2: 'Convert between fraction, decimal, and percent where the fraction has a non-obvious decimal equivalent.', l3: 'Identify which form of a number (fraction, decimal, percent) is needed and convert correctly within a multi-step problem.'},
+  'act_mth_pre_pct_of': {l1: 'Find a non-round percent (such as 35% or 60%) of a given number in a short word problem.', l2: 'Calculate what percent one number is of another when the relationship is non-obvious.', l3: 'Find the original value given that a percent of it equals a given amount, requiring reverse percent reasoning.'},
+  'act_mth_pre_pct_change': {l1: 'Calculate a simple percent increase from an original value to a new value.', l2: 'Determine percent decrease when students must recall that the base is the original, not the final, value.', l3: 'Calculate percent change in a problem where students must first find the original or final value before computing the percent.'},
+  'act_mth_pre_pct_reverse': {l1: 'Find the original price before a single discount with a non-round percent (such as 15%).', l2: 'Calculate the original value when given the result of a percent increase or decrease with a non-round percent.', l3: 'Find the original amount after two successive percent changes, where multiplying the percents directly is a common error.'},
+  'act_mth_pre_abs': {l1: 'Evaluate |−5| and use it in a simple expression.', l2: 'Solve a simple absolute value equation with two solutions and identify both.', l3: 'Solve an absolute value equation embedded in a larger expression where students must consider both cases.'},
+  'act_mth_pre_factors': {l1: 'Find the GCF of two small numbers.', l2: 'Find the LCM of three numbers using prime factorization.', l3: 'Apply GCF/LCM reasoning in a word problem where the setup requires recognizing which operation is needed.'},
+  'act_mth_pre_numprops': {l1: 'Determine whether a given number is odd, even, or prime.', l2: 'Determine whether a product or sum of given integers is odd or even without computing the full value.', l3: 'Use number property reasoning to determine the parity or primality of an algebraic expression.'},
+  'act_mth_pre_sci_notation': {l1: 'Convert a number from standard form to scientific notation.', l2: 'Multiply two numbers in scientific notation and express the result in proper scientific notation.', l3: 'Add two numbers in scientific notation with different exponents, requiring adjustment before adding.'},
+  'act_mth_pre_units': {l1: 'Convert miles to kilometers using a given conversion factor.', l2: 'Convert a rate (miles per hour) to different units in a two-step conversion.', l3: 'Solve a multi-step word problem requiring conversion of both units in a rate before computing the answer.'},
+  'act_mth_pre_stats_basic': {l1: 'Calculate the mean of five numbers.', l2: 'Find the median of an even-sized data set that requires averaging the two middle values.', l3: 'Determine which measure of center (mean, median, mode) changes most when a specific value is added to a data set. The added value must be close enough to the existing data that multiple measures shift meaningfully — do not use an extreme outlier that makes the mean obviously the most affected. Distractor notes must name the specific conceptual error (e.g. "student forgets to re-sort before finding the new median") — not vague errors like "student drops a number."'},
+  'act_mth_pre_weighted_avg': {l1: 'Calculate the average of two groups with different sizes using given group averages.', l2: 'Find what score is needed on a final exam to achieve a target weighted average in a course.', l3: 'Determine group size given overall average and the averages of two subgroups, requiring algebraic setup.'},
+  'act_mth_pre_counting': {l1: 'Count outcomes using the multiplication principle for a simple two-step process.', l2: 'Apply the multiplication principle to a three-step process with different options at each stage.', l3: 'Count outcomes with restrictions, requiring careful identification of which stages are affected by constraints.'},
+  'act_mth_pre_combinations': {l1: 'Calculate a simple combination C(n,k) where n and k are small and the context makes clear that order does not matter.', l2: 'Distinguish between a combination and a permutation in a problem where students must determine whether order matters before computing.', l3: 'Apply combinations in a multi-step problem requiring C(n,k) as one stage of a larger count, such as choosing a subgroup then arranging it.'},
+  'act_mth_pre_prob_basic': {l1: 'Find the probability of one outcome from a single draw out of a described collection (marbles, tiles, numbered slips, and so on).', l2: 'Calculate the probability of an event from a described non-uniform sample space.', l3: 'Find probability given a condition that reduces the sample space, requiring identification of the new total.'},
+  'act_mth_pre_prob_andor': {l1: 'Apply the addition rule for two mutually exclusive events.', l2: 'Use the multiplication rule for two independent events and verify independence.', l3: 'Apply the general addition rule for two non-mutually exclusive events, avoiding double-counting.'},
+  'act_mth_ea_evaluate': {l1: 'Substitute a given value into a simple one-variable expression.', l2: 'Evaluate a multi-variable expression where negative values require careful sign tracking.', l3: 'Evaluate a nested expression where one substitution creates a new expression requiring a second evaluation.'},
+  'act_mth_ea_like_terms': {l1: 'Combine like terms in a simple polynomial with two variable terms.', l2: 'Simplify an expression with multiple variable terms and constants after distributing a coefficient.', l3: 'Simplify an expression where combining like terms across multiple groupings requires careful tracking of signs.'},
+  'act_mth_ea_distribute': {l1: 'Distribute a positive integer across a binomial in parentheses.', l2: 'Distribute a negative coefficient across a binomial and combine with remaining terms.', l3: 'Distribute across a trinomial and collect like terms in a multi-step simplification.'},
+  'act_mth_ea_linear_1var': {l1: 'Solve a one-step linear equation (e.g., 3x = 12).', l2: 'Solve a two-step linear equation requiring both addition/subtraction and multiplication/division.', l3: 'Solve a linear equation with variables on both sides and parentheses requiring distribution first.'},
+  'act_mth_ea_literal': {l1: 'Solve for y in the equation y + b = c.', l2: 'Rearrange a formula with three variables to isolate the specified variable.', l3: 'Solve for a variable embedded in a denominator or under a radical in a literal equation.'},
+  'act_mth_ea_ineq_1var': {l1: 'Solve a simple one-step inequality and represent it on a number line.', l2: 'Solve a two-step inequality, correctly flipping the sign when dividing by a negative.', l3: 'Solve a compound inequality and express the solution set correctly.'},
+  'act_mth_ea_abs_eq': {l1: 'Solve |x| = 5 and identify both solutions.', l2: 'Solve |2x − 3| = 7 and verify both solutions.', l3: 'Solve an absolute value equation where one solution is extraneous and must be discarded.'},
+  'act_mth_ea_abs_ineq': {l1: 'Solve |x| < 4 and write the solution as an inequality.', l2: 'Solve |x + 2| > 5 and write the solution as a compound inequality.', l3: 'Solve an absolute value inequality where the setup requires recognizing whether the solution is a union or intersection.'},
+  'act_mth_ea_sys_sub': {l1: 'Solve a 2×2 system by substitution when one equation is already solved for a variable.', l2: 'Solve a system by substitution when one equation must first be rearranged.', l3: 'Solve a system by substitution when substitution creates a quadratic, requiring factoring to finish.'},
+  'act_mth_ea_sys_elim': {l1: 'Solve a system by elimination when the coefficients of one variable are already opposite.', l2: 'Solve a system by elimination when one equation must be multiplied by a constant before eliminating.', l3: 'Solve a system by elimination when both equations must be modified and the solution is fractional.'},
+  'act_mth_ea_sys_word': {l1: 'Set up and solve a simple two-variable system from a word problem with clear variable definitions.', l2: 'Write and solve a system from a word problem requiring careful unit alignment between the two equations.', l3: 'Interpret the solution of a system in context and determine which value answers the specific question asked.'},
+  'act_mth_ea_poly_addsubt': {l1: 'Add two polynomials by combining like terms with positive coefficients.', l2: 'Subtract one polynomial from another, correctly distributing the negative sign.', l3: 'Add or subtract polynomials with fractional coefficients and multiple variable degrees.'},
+  'act_mth_ea_poly_mult': {l1: 'Multiply two binomials using FOIL.', l2: 'Multiply a trinomial by a binomial and collect all like terms.', l3: 'Multiply two polynomials and identify a specific coefficient in the result without expanding the full product.'},
+  'act_mth_ea_factor_gcf': {l1: 'Factor out the GCF from a simple two-term polynomial.', l2: 'Factor out a GCF that includes a variable from a three-term polynomial.', l3: 'Identify the GCF and factor completely when the remaining polynomial can be factored further.'},
+  'act_mth_ea_factor_trinomial': {l1: 'Factor x² + 5x + 6 into two binomials.', l2: 'Factor a trinomial with a negative constant, requiring careful sign analysis.', l3: 'Factor a trinomial that requires either: (a) factoring out a GCF first, then factoring the remaining trinomial (e.g., 2x² + 18x + 28 → factor out 2, then factor x² + 9x + 14); or (b) factoring and then applying the roots in a follow-up step (e.g., find the product or sum of the solutions). A question where a student only identifies two numbers that multiply to c and add to b — even with negative signs — is level 2 if the leading coefficient is already 1 after any factoring.'},
+  'act_mth_ea_factor_dos': {l1: 'Factor x² − 9 using the difference of squares pattern.', l2: 'Factor 4x² − 25, identifying both perfect squares correctly.', l3: 'Apply difference of squares within a larger factoring problem requiring GCF removal first. Across a batch of 9 questions, vary the distractor error types — do not use the same three wrong-answer types in every question. Realistic error types include: summing instead of differencing in the factors (e.g., (x+3)(x+3) instead of (x+3)(x−3)), forgetting to take the square root of the coefficient (e.g., leaving 4x instead of 2x), misidentifying a sum of squares as factorable, and sign errors on one factor.'},
+  'act_mth_ia_quad_factor': {l1: 'Solve a simple factorable quadratic (x² + 5x + 6 = 0).', l2: 'Solve a quadratic with a leading coefficient greater than 1 by factoring.', l3: 'Solve a quadratic that requires two or more of the following before factoring: (a) rearranging to standard form (terms not already in ax²+bx+c=0 order), (b) factoring out a GCF first, or (c) recognizing a disguised quadratic form (e.g., in terms of x²). A question that only requires factoring a trinomial with leading coefficient 1 and rearranging one term is L2, not L3. L3 must have a genuine setup trap that L2 does not.'},
+  'act_mth_ia_quad_formula': {l1: 'Apply the quadratic formula to a standard quadratic with integer coefficients.', l2: 'Apply the quadratic formula when the discriminant is not a perfect square, requiring simplification.', l3: 'Identify which solution from the quadratic formula is valid in context and discard the extraneous one.'},
+  'act_mth_ia_quad_complete': {l1: 'Complete the square for x² + 6x to write it in vertex form.', l2: 'Complete the square when the leading coefficient is 1 and the linear coefficient is odd, producing a fraction.', l3: 'Complete the square when a ≠ 1, requiring division before completing.'},
+  'act_mth_ia_quad_discriminant': {l1: 'Calculate the discriminant of a quadratic and state the number of real solutions.', l2: 'Determine what value of k makes a quadratic have exactly one solution.', l3: 'Interpret the discriminant in context to determine how many times a parabola intersects a line.'},
+  'act_mth_ia_func_eval': {l1: 'Evaluate f(3) given a simple polynomial function f(x).', l2: 'Evaluate f(g(2)) given two functions defined by simple expressions.', l3: 'Evaluate f(f(x)) or find x given f(x) = k, requiring solving rather than substituting.'},
+  'act_mth_ia_func_domain': {l1: 'Identify the domain of a simple rational function by setting the denominator ≠ 0.', l2: 'Find the domain of a function with both a radical and a rational component.', l3: 'Determine the range of a quadratic function from its graph or vertex form.'},
+  'act_mth_ia_func_compose': {l1: 'Compute f(g(x)) where both functions are linear.', l2: 'Compute g(f(x)) and simplify when one function is quadratic.', l3: 'Find x given (f∘g)(x) = k, requiring solving after composing.'},
+  'act_mth_ia_func_inverse': {l1: 'Find the inverse of a simple linear function f(x) = 2x + 3.', l2: 'Find the inverse of a function requiring two algebraic steps and verify by composing.', l3: 'Determine the domain restriction needed for a quadratic function to have an inverse.'},
+  'act_mth_ia_radical_simplify': {l1: 'Simplify √48 by factoring out perfect squares.', l2: 'Simplify a radical expression with a variable under the radical.', l3: 'Simplify a radical expression involving both numeric and variable factors with multiple powers.'},
+  'act_mth_ia_radical_ops': {l1: 'Add two like radical expressions (√3 + 2√3).', l2: 'Multiply two radical expressions and simplify the result.', l3: 'Rationalize a denominator containing a binomial radical using the conjugate.'},
+  'act_mth_ia_radical_eq': {l1: 'Solve √x = 5 and verify the solution.', l2: 'Solve √(2x + 1) = 3 and check for extraneous solutions.', l3: 'Solve a radical equation where squaring both sides produces a quadratic with one extraneous root.'},
+  'act_mth_ia_rational_simplify': {l1: 'Simplify a rational expression by canceling a common monomial factor.', l2: 'Simplify a rational expression by factoring and canceling a binomial factor.', l3: 'Simplify a complex rational expression where both numerator and denominator require factoring.'},
+  'act_mth_ia_rational_ops': {l1: 'Multiply two simple rational expressions and simplify.', l2: 'Add two rational expressions with different denominators requiring a common denominator.', l3: 'Subtract rational expressions where finding the LCD requires factoring both denominators.'},
+  'act_mth_ia_rational_eq': {l1: 'Solve a simple rational equation by cross-multiplying.', l2: 'Solve a rational equation requiring a common denominator, and check for excluded values.', l3: 'Solve a rational equation that produces a quadratic after clearing denominators, where one solution is extraneous.'},
+  'act_mth_ia_exponent_rules': {l1: 'Apply the product rule to simplify x³ · x⁵.', l2: 'Simplify an expression requiring multiple exponent rules (power of a power, negative exponent).', l3: 'Simplify a complex expression combining all exponent rules where order of operations matters.'},
+  'act_mth_ia_exp_growth': {l1: 'Identify whether a given exponential model represents growth or decay.', l2: 'Evaluate an exponential growth model for a specific input value.', l3: 'Determine the parameters of an exponential model from a described scenario and use it to answer a question.'},
+  'act_mth_ia_log_basic': {l1: 'Evaluate log₂(8) by converting to exponential form.', l2: 'Use logarithm properties to expand or condense a log expression.', l3: 'Solve a logarithmic equation requiring properties and checking for domain restrictions.'},
+  'act_mth_ia_seq_arith': {l1: 'Find the 5th term of an arithmetic sequence given the first term and common difference.', l2: 'Find the sum of the first n terms of an arithmetic sequence.', l3: 'Determine the number of terms in an arithmetic sequence given the first term, last term, and sum.'},
+  'act_mth_ia_seq_geo': {l1: 'Find the 4th term of a geometric sequence given the first term and common ratio.', l2: 'Identify the common ratio from two non-consecutive terms of a geometric sequence.', l3: 'Determine the sum of an infinite geometric series where the ratio satisfies |r| < 1.'},
+  'act_mth_ia_matrix_ops': {l1: 'Add two 2×2 matrices by adding corresponding entries.', l2: 'Multiply a 2×2 matrix by a scalar and add to another matrix.', l3: 'Multiply two 2×2 matrices and identify a specific entry of the result.'},
+  'act_mth_ia_matrix_det': {l1: 'Calculate the determinant of a 2×2 matrix.', l2: 'Find the inverse of a 2×2 matrix using the determinant.', l3: 'Use matrix inverses to solve a 2×2 system of equations.'},
+  'act_mth_cg_points': {l1: 'Identify the quadrant of a given point on the coordinate plane.', l2: 'Plot or identify a point described in a word problem and read off its coordinates.', l3: 'Determine the coordinates of a point satisfying multiple geometric conditions simultaneously.'},
+  'act_mth_cg_slope_calc': {l1: 'Calculate the slope between two given points with positive integer coordinates.', l2: 'Calculate the slope between two points with negative or fractional coordinates.', l3: 'Find the slope of a line from a graph (described in the figure field) where two labeled points with negative or fractional coordinates must be read first.'},
+  'act_mth_cg_slope_interp': {l1: 'Identify the slope in a linear equation and state its meaning as a rate of change.', l2: 'Interpret slope in a contextual scenario where units must be attached to the rate.', l3: 'Determine the sign and approximate value of slope from a described real-world scenario without an equation.'},
+  'act_mth_cg_slope_parpep': {l1: 'Find the slope of a line parallel or perpendicular to a line given in slope-intercept form.', l2: 'Find the slope of a line perpendicular to a given line and write its equation.', l3: 'Find the equation of the line through a given point that is perpendicular to a line given in standard form, where the slope must be found first.'},
+  'act_mth_cg_linear_slopeint': {l1: 'Identify slope and y-intercept from an equation in slope-intercept form.', l2: 'Write the equation of a line given its slope and y-intercept.', l3: 'Write the equation of a line given two points, requiring slope calculation first.'},
+  'act_mth_cg_linear_other': {l1: 'Convert an equation from standard form to slope-intercept form.', l2: 'Write the equation of a line in point-slope form given a point and slope.', l3: 'Determine which of several equations in different forms represents the same line.'},
+  'act_mth_cg_linear_graph': {l1: 'Find the y-intercept of a line given its equation by setting x = 0.', l2: 'Find both intercepts of a line in standard form and verify the graph.', l3: 'Determine the equation of a line from a graph where the intercepts are not integers.'},
+  'act_mth_cg_dist_mid': {l1: 'Find the midpoint of a segment with two given endpoints.', l2: 'Find the distance between two points using the distance formula.', l3: 'Use the midpoint formula to find an endpoint given the midpoint and the other endpoint.'},
+  'act_mth_cg_parabola_std': {l1: 'Identify the direction a parabola opens from its standard form equation.', l2: 'Find the vertex and axis of symmetry of a parabola in standard form using x = −b/(2a).', l3: 'Determine the number and approximate location of x-intercepts from the standard form without graphing.'},
+  'act_mth_cg_parabola_vertex': {l1: 'Identify the vertex and direction from a parabola in vertex form y = a(x−h)²+k.', l2: 'Convert from vertex form to standard form and identify key features.', l3: 'Determine the equation of a parabola in vertex form given the vertex and one other point.'},
+  'act_mth_cg_circle_eq': {l1: 'Identify the center and radius of a circle from (x−h)²+(y−k)²=r².', l2: 'Write the equation of a circle given its center and radius.', l3: 'Find the center and radius of a circle by completing the square on a general form equation.'},
+  'act_mth_cg_transforms': {l1: 'Identify the new coordinates of a point after a simple horizontal or vertical translation.', l2: 'Describe the transformation that maps one figure to another given before and after coordinates.', l3: 'Apply a composition of transformations and determine the final position of a point.'},
+  'act_mth_cg_sys_graph': {l1: 'Identify the solution to a system of two lines from their graph.', l2: 'Determine whether a system has one solution, no solution, or infinite solutions from the equations.', l3: 'Find the intersection of a line and a parabola graphically and verify algebraically.'},
+  'act_mth_pg_angles_supp': {l1: 'Find the measure of an angle supplementary to a given angle.', l2: 'Find the measure of two vertical angles when adjacent angles are expressed algebraically.', l3: 'Set up and solve for multiple unknown angles in a figure involving supplementary, complementary, and vertical angle relationships.'},
+  'act_mth_pg_angles_trans': {l1: 'Identify alternate interior angles and state they are equal.', l2: 'Find the measure of a co-interior angle given a parallel line and transversal.', l3: 'Determine which lines are parallel given angle measures and justify using angle pair relationships.'},
+  'act_mth_pg_tri_angles': {l1: 'Find the third angle of a triangle given the other two.', l2: 'Find an exterior angle of a triangle using the exterior angle theorem.', l3: 'Solve for an unknown angle in a figure containing multiple triangles sharing sides or vertices.'},
+  'act_mth_pg_tri_sim': {l1: 'Identify two triangles as similar given two pairs of equal angles.', l2: 'Find a missing side length in similar triangles using proportional sides.', l3: 'Find a missing length in a figure where the similar triangles must first be identified (for example, nested or overlapping triangles that share an angle).'},
+  'act_mth_pg_tri_special': {l1: 'Find the sides of a 30-60-90 triangle given the hypotenuse.', l2: 'Find all sides of a 45-45-90 triangle given one leg.', l3: 'Solve a problem requiring identification and application of a special right triangle embedded in a larger figure.'},
+  'act_mth_pg_pythagorean': {l1: 'Find the hypotenuse of a right triangle given the two legs.', l2: 'Find a leg of a right triangle given the hypotenuse and the other leg.', l3: 'Apply the Pythagorean theorem within a multi-step problem where identifying the right triangle requires additional reasoning.'},
+  'act_mth_pg_tri_area': {l1: 'Calculate the area of a triangle given its base and height.', l2: 'Find the area of a triangle where the height must be determined using the Pythagorean theorem.', l3: 'Find the area of a triangle embedded in a coordinate plane using base and height from coordinates.'},
+  'act_mth_pg_quad_props': {l1: 'State the defining property that distinguishes a rectangle from a parallelogram.', l2: 'Find a missing angle or side in a parallelogram using its properties.', l3: 'Determine the type of quadrilateral from given side and angle measurements and apply its specific properties.'},
+  'act_mth_pg_quad_area': {l1: 'Calculate the area of a rectangle given length and width.', l2: 'Find the area of a trapezoid using the formula and given parallel sides and height.', l3: 'Find the area of a quadrilateral in the coordinate plane by decomposing it into triangles.'},
+  'act_mth_pg_circle_arc': {l1: 'Find the arc length corresponding to a central angle of 90° in a circle with a given radius.', l2: 'Find the sector area given a non-standard central angle and radius.', l3: 'Find the central angle given an arc length and radius, requiring reverse calculation.'},
+  'act_mth_pg_circle_area': {l1: 'Calculate the area of a circle given its radius.', l2: 'Find the circumference given the area of a circle.', l3: 'Find the radius of a circle given a relationship between its circumference and area.'},
+  'act_mth_pg_circle_inscribed': {l1: 'Find an inscribed angle given the intercepted arc measure using the inscribed angle theorem directly (inscribed angle = half the arc). Single-step application only.', l2: 'Find an unknown arc or angle in a figure where applying the inscribed angle theorem is necessary but the unknown is not the inscribed angle itself — e.g., given the inscribed angle, find the arc; or use the fact that an inscribed angle in a semicircle is 90° to find a missing angle. The student must apply the theorem and then perform one additional step. A question that only asks a student to halve a given arc is L1, not L2.', l3: 'Solve for an unknown angle in a figure that requires applying the inscribed angle theorem two or more times, or combining it with another circle property (e.g., the arc addition postulate, or the fact that a diameter subtends a 180° arc). Note: do not test the intersecting-chord angle theorem (angle = half the sum of intercepted arcs) — that is a separate skill outside this slug.'},
+  'act_mth_pg_3d_sa': {l1: 'Calculate the surface area of a rectangular prism given its dimensions.', l2: 'Find the lateral surface area of a cylinder given radius and height.', l3: 'Find the surface area of a composite solid formed by a cylinder topped with a cone.'},
+  'act_mth_pg_3d_vol': {l1: 'Calculate the volume of a rectangular prism.', l2: 'Find the volume of a cone given radius and height.', l3: 'Find the volume of a solid with a portion removed, requiring subtraction of volumes.'},
+  'act_mth_pg_composite': {l1: 'Find the area of an L-shaped figure by splitting into two rectangles.', l2: 'Find the area of a shape with a semicircle attached to a rectangle.', l3: 'Find the perimeter of a composite figure where not all side lengths are given directly.'},
+  'act_mth_trig_sohcahtoa': {l1: 'Identify which trig ratio to use given the opposite, adjacent, and hypotenuse labels.', l2: 'Write and evaluate the correct trig ratio to find a missing side in a right triangle.', l3: 'Set up and solve a trig ratio in a word problem where labeling legs as opposite/adjacent requires careful attention to the reference angle.'},
+  'act_mth_trig_sides': {l1: 'Use sin(30°) to find the opposite side given the hypotenuse.', l2: 'Find a missing angle using inverse trig given two sides of a right triangle.', l3: 'Solve a right triangle (all sides and angles) from minimal given information.'},
+  'act_mth_trig_special_angles': {l1: 'Give the exact value of a trig function at 30°, 45°, or 60°, with exact-value answer choices.', l2: 'Use exact special angle values to evaluate a trig expression, with exact-value answer choices.', l3: 'Combine special angle values in an expression requiring simplification.'},
+  'act_mth_trig_reciprocal': {l1: 'State that csc(θ) = 1/sin(θ) and evaluate for a given angle.', l2: 'Find the value of sec or cot given the value of cos or tan.', l3: 'Simplify an expression combining reciprocal and standard trig functions.'},
+  'act_mth_trig_graphs': {l1: 'Identify the amplitude of a sine function from its equation.', l2: 'Determine the period and phase shift of a given sine or cosine function. When describing or asking about horizontal shifts in stems, answer choices, and explanations, always use plain directional language: "shifted X units to the left" or "shifted X units to the right." Do not describe phase shift using cycle language like "it crosses its midline going upward at x = π/6" or "it attains its maximum at x = π" — these phrasings are confusing and non-standard for students at this level.', l3: 'Write the equation of a trig function from its graph, requiring identification of amplitude, period, and phase shift. Apply the same plain directional language rule for horizontal shifts as at L2.'},
+  'act_mth_trig_pyth_identity': {l1: 'Apply sin²θ + cos²θ = 1 to find sin(θ) given cos(θ).', l2: 'Use the Pythagorean identity to simplify a trig expression.', l3: 'Simplify a trig expression where the Pythagorean identity applies only after a substitution or factoring step.'},
+  'act_mth_trig_law_sines': {l1: 'Set up the law of sines ratio for a given non-right triangle.', l2: 'Solve for a missing side using the law of sines given two angles and one side.', l3: 'Solve a multi-step problem using the law of sines where the student must first find a missing angle (using the triangle angle sum) before applying the ratio to find a side. The question must be solvable with a unique answer — do not use the ambiguous case (SSA with two possible triangles). The ambiguous case is not tested on the ACT and produces questions that are too complex and open-ended for this format.'},
+  'act_mth_trig_law_cosines': {l1: 'Identify when to use the law of cosines vs. the law of sines.', l2: 'Solve for a missing side using the law of cosines given two sides and the included angle.', l3: 'Find a missing angle using the law of cosines given all three sides.'},
+  'act_rdg_mi_single': {l1: 'Identify the main idea of a short passage with a clear thesis sentence.', l2: 'Determine the main idea of a passage where it is implied rather than stated in a single sentence.', l3: 'Distinguish the main idea from a recurring detail or a supporting argument that could easily be mistaken for the central point.'},
+  'act_rdg_mi_paired': {l1: 'Identify what both passages in a paired set agree on.', l2: 'Determine the central idea that one passage supports and the other challenges.', l3: 'Synthesize the central ideas of two passages that approach the same topic from different disciplinary perspectives.'},
+  'act_rdg_mi_purpose': {l1: 'Identify that a passage written in first person with narrative events is primarily telling a story.', l2: 'Distinguish between a passage that primarily informs and one that primarily argues, when both elements are present.', l3: 'Identify the primary purpose of a passage that uses narrative techniques to advance an argument.'},
+  'act_rdg_mi_para_purpose': {l1: 'State the function of a paragraph that clearly introduces, provides evidence, or concludes.', l2: 'Identify the function of a paragraph that transitions between two main arguments.', l3: 'Determine the rhetorical function of a paragraph that seems tangential but ultimately qualifies or strengthens the main argument.'},
+  'act_rdg_mi_title': {l1: 'Choose the best title for a passage with a single, clearly stated main idea.', l2: 'Select the best summary when the passage has multiple themes and one title captures all while others focus on only one.', l3: 'Choose the title that best captures the main idea when all options are factually accurate but differ in scope or emphasis.'},
+  'act_rdg_de_locate': {l1: 'Find a specific fact explicitly stated in a short, clearly referenced portion of the passage.', l2: 'Locate a detail from a long passage where the relevant information is embedded in a dense paragraph.', l3: 'Find a detail where the question paraphrases the passage information rather than quoting it directly.'},
+  'act_rdg_de_except': {l1: 'Identify which of four simple facts is NOT stated in a short passage.', l2: 'Determine which item is NOT mentioned when three items appear in different parts of a longer passage.', l3: 'Identify the NOT/EXCEPT answer when all options are close paraphrases of passage content.'},
+  'act_rdg_de_sequence': {l1: 'Identify which event came first based on clear chronological language.', l2: 'Reconstruct the sequence of events when the passage presents them out of chronological order.', l3: 'Determine sequence in a passage that uses flashback or non-linear narration without explicit time markers.'},
+  'act_rdg_de_evidence': {l1: 'Find the sentence that directly supports a clearly stated claim.', l2: 'Identify the evidence that best supports a claim when multiple details are plausible but only one is directly relevant.', l3: 'Determine which piece of evidence best supports an implicit claim that is not directly stated.'},
+  'act_rdg_de_cause_effect': {l1: 'Identify the stated cause of a described event.', l2: 'Trace a causal chain across two paragraphs to identify the ultimate cause of an outcome.', l3: 'Distinguish between correlation and causation in a passage that presents both without clearly labeling them.'},
+  'act_rdg_inf_implied': {l1: 'Draw a simple inference from a passage that strongly implies a conclusion.', l2: 'Infer a conclusion that requires combining information from two separate paragraphs.', l3: 'Make an inference in a passage where the author deliberately withholds information, requiring reading between the lines.'},
+  'act_rdg_inf_motivation': {l1: 'Identify why a character does something based on an explicit statement of their feelings.', l2: 'Infer a character\'s motivation from their actions and dialogue without an explicit statement.', l3: 'Determine a character\'s unstated motivation when their stated reason conflicts with their actions.'},
+  'act_rdg_inf_assumption': {l1: 'Identify an assumption that is clearly required for the author\'s argument to hold.', l2: 'Determine the underlying assumption when the author\'s argument requires a premise that is never directly stated.', l3: 'Distinguish between an assumption necessary to the argument and a related belief the author may hold but does not rely on.'},
+  'act_rdg_inf_generalize': {l1: 'Extend a clearly stated principle to an obvious parallel situation.', l2: 'Determine which generalization is most supported by the evidence in the passage.', l3: 'Identify the most accurate generalization when all options are partially supported but differ in scope or qualification.'},
+  'act_rdg_inf_predict': {l1: 'Predict what a character would do next based on a clear description of their personality.', l2: 'Predict an outcome based on a trend described in the passage.', l3: 'Predict the most likely next development in a narrative where the author has laid subtle groundwork.'},
+  'act_rdg_voc_meaning': {l1: 'Determine the meaning of a common word used in a context where the meaning is obvious.', l2: 'Determine the meaning of a word with multiple common meanings where context must distinguish between them.', l3: 'Determine the meaning of a rare or technical word from context clues embedded in the surrounding sentences.'},
+  'act_rdg_voc_connotation': {l1: 'Identify whether a word carries a positive or negative connotation in context.', l2: 'Explain why the author chose a specific word rather than a near-synonym that would also be accurate.', l3: 'Determine the connotative effect of a word choice on the reader\'s perception of a character or event.'},
+  'act_rdg_voc_figurative': {l1: 'Identify what a simple simile or metaphor means (\'the room was a furnace\').', l2: 'Interpret an extended metaphor used throughout a paragraph.', l3: 'Determine the meaning of a figurative expression that relies on cultural or literary allusion for full interpretation.'},
+  'act_rdg_craft_tone': {l1: 'Identify a passage\'s tone when it is clearly enthusiastic, critical, or neutral.', l2: 'Distinguish between two similar tones (e.g., cautious vs. skeptical) based on specific word choices.', l3: 'Identify a tone that shifts between paragraphs and explain what drives the shift.'},
+  'act_rdg_craft_pov': {l1: 'Identify the point of view (first/third) of a passage.', l2: 'Determine the narrator\'s reliability based on discrepancies between what they say and what the passage implies.', l3: 'Analyze how the choice of point of view affects the reader\'s access to information in the passage.'},
+  'act_rdg_craft_rhetoric': {l1: 'Identify an example of irony when the gap between stated and actual meaning is obvious.', l2: 'Identify the rhetorical device (anaphora, juxtaposition, understatement) used in a given paragraph.', l3: 'Explain how a specific rhetorical device contributes to the passage\'s argument or emotional effect.'},
+  'act_rdg_craft_evidence_use': {l1: 'Identify that the author uses a personal anecdote to support a claim.', l2: 'Distinguish between how the author uses statistical evidence vs. anecdote, and what each is meant to accomplish.', l3: 'Evaluate whether the evidence the author uses is sufficient to support the specific claim made.'},
+  'act_rdg_craft_compare': {l1: 'Identify one clear point of agreement between two paired passages.', l2: 'Determine on which specific point two authors most directly disagree.', l3: 'Explain how the same evidence could be used to support both authors\' positions, given their different assumptions.'},
+  'act_rdg_data_read': {l1: 'Read a specific value from a bar chart with clearly labeled axes.', l2: 'Extract a value from a multi-line graph at a specific data point, distinguishing between series.', l3: 'Read a value from a graph with a non-linear scale or units that require conversion before answering.'},
+  'act_rdg_data_relate': {l1: 'Determine whether a data point in a table supports or contradicts a clearly stated claim.', l2: 'Identify which data from a graph best supports a specific argument made in the passage.', l3: 'Determine whether the graphic modifies, extends, or contradicts the passage\'s argument in a subtle way.'},
+  'act_rdg_data_trend': {l1: 'Describe the overall direction (increasing/decreasing) of a trend shown in a graph.', l2: 'Identify a change in trend direction at a specific point in a graph with multiple inflection points.', l3: 'Explain what drives a trend based on information from both the graphic and the passage text.'},
+  'act_sci_dr_read_graph': {l1: 'Read the y-value at a given x from a single line on a clearly labeled graph.', l2: 'Read a specific value from a graph with multiple lines where series labels must be distinguished.', l3: 'Read a value from a graph with a broken y-axis or non-zero starting point where misreading the scale is easy.'},
+  'act_sci_dr_read_table': {l1: 'Locate a single value at the intersection of a specific row and column in a small table.', l2: 'Find a value in a multi-variable table where the correct row/column requires reading two labels simultaneously.', l3: 'Extract and combine values from multiple cells in a complex table to answer a question.'},
+  'act_sci_dr_interpolate': {l1: 'Estimate a value between two clearly plotted data points on a linear graph.', l2: 'Interpolate between data points on a nonlinear curve where the rate of change is not constant.', l3: 'Interpolate from a scatter plot where the trend line is not drawn and must be estimated from the data.'},
+  'act_sci_dr_extrapolate': {l1: 'Predict the next value in a clearly linear trend beyond the data range.', l2: 'Extrapolate from a nonlinear graph and recognize that the rate of change applies to the prediction.', l3: 'Extrapolate from sparse data and identify which of two possible trends is more consistent with the existing data.'},
+  'act_sci_dr_trend_dir': {l1: 'State whether the relationship between two variables is positive or negative from a graph.', l2: 'Identify that two variables have no relationship when the graph shows a flat or scattered distribution.', l3: 'Distinguish between a positive relationship and an inverse relationship when the graph\'s y-axis is inverted.'},
+  'act_sci_dr_trend_rate': {l1: 'Identify that a steeper slope indicates a faster rate of change.', l2: 'Compare rates of change for two segments of a nonlinear graph.', l3: 'Determine which of two trials shows a faster rate of change when both are nonlinear and cross at some point.'},
+  'act_sci_dr_compare': {l1: 'State which of two groups had a higher value at a specific condition.', l2: 'Compare results across three or more trials and identify the pattern that distinguishes them.', l3: 'Identify the one condition under which two otherwise different trials produce the same result.'},
+  'act_sci_dr_axes': {l1: 'Identify the units on each axis of a graph and state what each axis represents.', l2: 'Determine which axis represents the independent variable and explain why.', l3: 'Interpret an unusual axis label (e.g., inverse of a quantity) and correctly relate it to the described relationship.'},
+  'act_sci_dr_multivar': {l1: 'Read values from a graph with two clearly distinguished data series.', l2: 'Identify the data series from a grouped bar chart and compare values across groups.', l3: 'Extract the correct combination of variable values from a graph with a dual y-axis.'},
+  'act_sci_rs_indep_var': {l1: 'Identify the variable the experimenter deliberately changed when it is explicitly stated.', l2: 'Determine the independent variable from the experiment description when it is implied by what was systematically varied.', l3: 'Identify the independent variable in a multifactor experiment where the passage describes varying several conditions.'},
+  'act_sci_rs_dep_var': {l1: 'Identify the measured outcome when the experiment description explicitly states what was recorded.', l2: 'Determine the dependent variable from the data table when the description does not name it directly.', l3: 'Distinguish the dependent variable from a controlled variable in an experiment with multiple measured outcomes.'},
+  'act_sci_rs_control_var': {l1: 'Identify one variable held constant across all trials.', l2: 'List all controlled variables in an experiment and explain why each must be held constant.', l3: 'Identify the controlled variable whose absence from the control list represents a flaw in experimental design.'},
+  'act_sci_rs_design': {l1: 'Identify the control group in an experiment where it is clearly labeled.', l2: 'Explain why a control group is necessary for the experimental results to be meaningful.', l3: 'Evaluate whether the experimental design adequately isolates the variable being tested.'},
+  'act_sci_rs_results': {l1: 'State what happened to the dependent variable when the independent variable increased, based on the data.', l2: 'Describe the pattern of results across three or more conditions.', l3: 'Explain a non-obvious result (e.g., a plateau or reversal) using information provided in the passage.'},
+  'act_sci_rs_hypothesis': {l1: 'Determine whether the data supports or refutes a clearly stated hypothesis.', l2: 'Determine whether the data partially supports a hypothesis and identify which aspect it confirms or contradicts.', l3: 'Evaluate a hypothesis that is not directly addressed by the data, requiring inference about what the data implies.'},
+  'act_sci_rs_error': {l1: 'Identify an obvious limitation (small sample size, short time period) explicitly mentioned in the passage.', l2: 'Identify a confounding variable that was not controlled for and explain how it might affect the results.', l3: 'Evaluate whether a described limitation would change the direction of the conclusion or only its strength.'},
+  'act_sci_rs_followup': {l1: 'Identify which follow-up experiment would answer a simple, directly related question.', l2: 'Design a follow-up experiment that would isolate one specific confounding variable identified in the study.', l3: 'Choose the follow-up that would most efficiently distinguish between two competing explanations for the results.'},
+  'act_sci_rs_apply': {l1: 'Apply a clearly stated experimental result to a directly analogous new scenario.', l2: 'Apply findings to a new scenario where the conditions partially match the experimental conditions.', l3: 'Predict the outcome in a novel scenario by extrapolating from results in a non-obvious way.'},
+  'act_sci_rs_synthesize': {l1: 'Identify one conclusion that both experiments in a passage support.', l2: 'Determine how the results of a second experiment strengthen or weaken the conclusion of the first.', l3: 'Reconcile apparently contradictory results from two experiments by identifying the variable that differs between them.'},
+  'act_sci_cv_one_position': {l1: 'Summarize Scientist 1\'s position on a clearly stated claim.', l2: 'Identify which specific evidence Scientist 1 uses to support their position.', l3: 'Distinguish between Scientist 1\'s stated conclusion and the assumption underlying it.'},
+  'act_sci_cv_two_position': {l1: 'State what Scientist 2 claims in contrast to Scientist 1 on a clear issue.', l2: 'Identify the specific mechanism Scientist 2 proposes that differs from Scientist 1\'s.', l3: 'Determine whether Scientist 2\'s position is a complete rejection or a partial modification of Scientist 1\'s.'},
+  'act_sci_cv_agree': {l1: 'Identify a fact that both scientists accept as true.', l2: 'Determine on which empirical observation both scientists agree, even though they interpret it differently.', l3: 'Identify the shared assumption that underlies both scientists\' positions, even though neither states it explicitly.'},
+  'act_sci_cv_disagree': {l1: 'Identify the main claim on which the two scientists directly contradict each other.', l2: 'Determine whether the scientists\' disagreement is about the data, the interpretation, or the mechanism.', l3: 'Identify the deepest point of disagreement when the scientists appear to agree on surface claims but diverge on underlying causes.'},
+  'act_sci_cv_evaluate': {l1: 'Determine which scientist\'s view is supported by a straightforwardly stated new finding.', l2: 'Determine which scientist is strengthened by new data that is relevant only after reasoning through both positions.', l3: 'Evaluate new data that partially supports both scientists and determine which position it more strongly supports.'},
+  'act_sci_cv_weaken': {l1: 'Identify the finding that would directly contradict Scientist 1\'s stated prediction.', l2: 'Determine which finding undermines the key assumption behind Scientist 2\'s argument.', l3: 'Identify the finding that would weaken one scientist\'s position without strengthening the other\'s.'},
+  'act_sci_cv_strengthen': {l1: 'Identify the finding that directly confirms Scientist 2\'s stated prediction.', l2: 'Determine which additional evidence would best support Scientist 1\'s argument by filling a gap in their reasoning.', l3: 'Identify the finding that would strengthen one scientist\'s position by ruling out the most significant alternative explanation.'},
+  'act_sci_cv_apply': {l1: 'Apply Scientist 1\'s stated conclusion to predict what they would expect in a similar scenario.', l2: 'Apply Scientist 2\'s mechanism to a new situation not directly addressed in their argument.', l3: 'Determine what both scientists would differently predict for the same new scenario, given their distinct positions.'},
+};
+
+let selectedLevel = null;
+
+function setLevel(n) {
+  selectedLevel = n;
+  [1,2,3].forEach(i => {
+    const btn = document.getElementById(`btn-${i}`);
+    btn.className = `diff-btn${i === n ? ` active-${i}` : ''}`;
+  });
+  update();
+}
+
+function vals() {
+  return {
+    section: document.getElementById('in-section').value.trim(),
+    slug:    document.getElementById('in-slug').value.trim(),
+    name:    document.getElementById('in-name').value.trim(),
+    desc:    document.getElementById('in-desc').value.trim(),
+    level:   selectedLevel,
+    count:   parseInt(document.getElementById('in-count').value) || 9,
+  };
+}
+
+function getLevelKey(n) { return n === 1 ? 'l1' : n === 2 ? 'l2' : 'l3'; }
+function getLevelName(n) { return n === 1 ? '1 — Foundational' : n === 2 ? '2 — Standard' : '3 — Hard'; }
+function getLevelClass(n) { return `l${n}`; }
+
+// ── Earlier prompt, still used for Reading and Science ──
+function buildTextLegacy(v) {
+  const sd = SKILL_DEFS[v.slug];
+  const defText = sd ? sd[getLevelKey(v.level)] : '[definition not found — check slug]';
+  const levelName = getLevelName(v.level);
+
+  return `You are an expert ACT test question writer with deep knowledge of how the ACT is structured and how students make mistakes.
+
+Generate ${v.count} multiple choice ACT-style questions for the following skill at difficulty level ${v.level} only.
+
+SECTION: ${v.section}
+SKILL SLUG: ${v.slug}
+SKILL NAME: ${v.name}
+SKILL DESCRIPTION: ${v.desc}
+DIFFICULTY LEVEL: ${levelName}
+DIFFICULTY DEFINITION: ${defText}
+ANSWER SEQUENCE: ${currentSequence.join(", ")} (question 1 uses the first letter as its correct answer, question 2 the second, and so on — write each question so that the specified letter is correct)
+
+All ${v.count} questions must be at difficulty level ${v.level}. Do not mix difficulty levels.
+
+STRICT REQUIREMENTS:
+
+1. SKILL ISOLATION
+Every question must test ONLY this skill. A student who has mastered this skill should get it right. A student who has not should plausibly get it wrong. Do not introduce other rules or concepts the student would need to solve it.
+
+2. QUESTION FORMAT
+
+If SECTION is ACT English:
+Format questions exactly as they appear on the ACT English section.
+- Present a sentence with the relevant portion marked with underscores like _this portion_ to indicate underlining
+- Option A must always be NO CHANGE — the original underlined text exactly as written
+- Options B, C, D are alternatives
+- The question stem should simply end with: "Which of the following is the best version of the underlined portion?"
+- Approximately 20–25% of questions should have NO CHANGE (option A) as the correct answer — this matches the real ACT proportion. Most questions should have a genuine error to fix, but not all.
+- For questions testing a missing element (e.g. a missing comma or conjunction), insert a caret ^ at the point of insertion and make the options possible insertions, with option A being NO CHANGE (no insertion)
+
+If SECTION is ACT Math, ACT Reading, or ACT Science:
+Present a clear question stem appropriate to the content. The four answer options (A, B, C, D) are all plausible to a student who has not mastered the skill. One is unambiguously correct. Do not use the NO CHANGE convention.
+
+3. DIFFICULTY
+Every question must match this definition exactly: ${defText}
+Do not generate questions that are easier or harder than this definition describes.
+
+4. DISTRACTORS
+Each wrong answer must represent a specific, realistic mistake a student would make — not a random wrong answer or a number that is close to the correct answer.
+
+For Math questions, distractors must come from one of these real error categories:
+- Wrong operation order (e.g. adding before multiplying, ignoring exponents)
+- Sign error (e.g. forgetting to distribute a negative, dropping a minus sign)
+- Partial completion (e.g. stopping at an intermediate step and treating it as the answer)
+- Wrong formula or rule applied (e.g. using the wrong percent formula, applying multiplication where division is needed)
+- Arithmetic error on a specific step (e.g. computing 3 squared as 6 instead of 9)
+
+For English questions, distractors must reflect a real grammar misconception:
+- Applying the right rule in the wrong situation
+- Confusing two rules that sound similar
+- Over-correcting (e.g. adding punctuation where none is needed)
+- Choosing an option that fixes one error but introduces another
+
+For each wrong answer, the distractor note must name which error category applies and describe the specific mistake — not just say students might get this wrong.
+
+Bad distractor note: "Students who don't know PEMDAS might pick this."
+Good distractor note: "Student evaluates left-to-right without applying the exponent first — computes (2+3) squared as 5 squared only after adding, getting 25 instead of 13."
+
+5. EXPLANATIONS
+For each question write an explanation that:
+- Names the underlying rule or principle explicitly before applying it. Do not only show the calculation. For example: "The Multiplication Principle states that independent choices are multiplied — not added." Name the rule first, then apply it.
+- Explains how the rule applies to this specific question
+- States why the correct answer is right
+Written at a level appropriate for a high school student.
+The explanation field must contain only the final, clean explanation. Never show working, self-correction, rechecking, or scratchpad reasoning (e.g. "let me recheck...", "hmm that doesn't match...", "let me try again"). If you find yourself revising mid-explanation, it means the question's numbers, options, or answer key were set up incorrectly. Do not patch the explanation around the error — regenerate the entire question from scratch with a stem whose numbers produce one of your four intended answer values, then write the explanation cleanly.
+
+5b. CANONICAL RULE PHRASINGS
+CANONICAL RULE PHRASINGS — When writing an explanation, if the skill involves one of the principles below, open with this exact sentence before applying it to the question. Do not paraphrase or reword these. If the skill is not listed here, open the explanation naturally without forcing a named rule.
+
+--- PRE-ALGEBRA ---
+
+Order of Operations (PEMDAS): "The Order of Operations (PEMDAS) states that expressions must be evaluated in this sequence: Parentheses, Exponents, Multiplication and Division (left to right), then Addition and Subtraction (left to right)."
+
+Integer Operations – multiplying/dividing negatives: "The Sign Rule states that multiplying or dividing two numbers with the same sign gives a positive result, and two numbers with opposite signs gives a negative result."
+
+Fraction Addition/Subtraction: "The Common Denominator Principle states that fractions can only be added or subtracted after they have been converted to a common denominator."
+
+Fraction Multiplication: "The Fraction Multiplication Principle states that to multiply fractions, multiply the numerators together and the denominators together."
+
+Fraction Division: "The Fraction Division Principle states that dividing by a fraction is equivalent to multiplying by its reciprocal."
+
+Fraction Comparison (Part-to-Whole): "The Part-to-Whole Proportion Principle states that the fraction representing one part equals that part's value divided by the sum of all parts."
+
+Part-to-Part Ratio: "The Part-to-Part Proportion Principle states that for every fixed amount of one part, a fixed proportional amount of the other part is required."
+
+Proportions – Direct: "The Direct Proportion Principle states that when two situations share the same rate, the ratio of corresponding quantities must be equal."
+
+Percent Conversion: "The Percent Conversion Principle states that a percent is a ratio out of 100, so dividing by 100 converts a percent to a decimal and multiplying by 100 converts a decimal to a percent."
+
+Percent Of: "The Percent Of Principle states that to find a percent of a quantity, convert the percent to a decimal and multiply by the whole."
+
+Percent Change: "The Percent Change Principle states that percent change equals the difference between the new and original values divided by the original value, multiplied by 100."
+
+Reverse Percent: "The Reverse Percent Principle states that when a percent of an unknown whole equals a known value, divide the known value by the percent (as a decimal) to find the whole."
+
+Absolute Value: "The Absolute Value Principle states that the absolute value of a number is its distance from zero on the number line, so it is always non-negative."
+
+GCF/LCM: "The Factor Principle states that the greatest common factor (GCF) of two numbers is the largest integer that divides both evenly, and the least common multiple (LCM) is the smallest integer that both divide into evenly."
+
+Scientific Notation: "The Scientific Notation Principle states that a number in scientific notation is written as a value between 1 and 10 multiplied by a power of 10."
+
+Mean: "The Mean Principle states that the mean of a data set equals the sum of all values divided by the number of values."
+
+Median: "The Median Principle states that the median is the middle value when all values are arranged in order; for an even number of values, it is the average of the two middle values."
+
+Weighted Average: "The Weighted Average Principle states that when groups of different sizes are combined, the overall average equals the sum of each group's (size × average) divided by the total number of values."
+
+Multiplication Principle (Counting): "The Multiplication Principle states that when a process has multiple independent stages, the total number of outcomes equals the product of the number of choices at each stage. Multiplication applies — rather than addition — because both choices must be made together, so each option at one stage pairs with every option at the next." The explanation must then explicitly state why multiplication (not addition) applies to the specific question — name the independent stages and what makes them independent.
+
+Combinations: "The Combination Principle states that the number of ways to choose k items from n items when order does not matter is C(n,k) = n! / (k!(n−k)!)."
+
+Basic Probability: "The Basic Probability Principle states that the probability of an event equals the number of favorable outcomes divided by the total number of possible outcomes. After stating this rule, the explanation must explicitly show how each number in P = favorable / total was determined — state the favorable count, state the total count, and show the fraction before simplifying. Do not skip directly to the simplified answer."
+
+Probability – And (independent events): "The Multiplication Rule for Probability states that the probability of two independent events both occurring equals the product of their individual probabilities."
+
+Probability – Or (mutually exclusive): "The Addition Rule for Probability states that the probability of either of two mutually exclusive events occurring equals the sum of their individual probabilities."
+
+Probability – Or (non-mutually exclusive): "The General Addition Rule states that the probability of either of two events occurring equals the sum of their individual probabilities minus the probability of both occurring."
+
+--- ELEMENTARY ALGEBRA ---
+
+Combining Like Terms: "The Like Terms Principle states that only terms with identical variable parts can be combined by adding or subtracting their coefficients."
+
+Distributive Property: "The Distributive Property states that a(b + c) = ab + ac — every term inside the parentheses must be multiplied by the factor outside."
+
+Solving Linear Equations: "The Equation Balance Principle states that any operation applied to one side of an equation must be applied to the other side to maintain equality."
+
+Inequalities – flipping the sign: "The Inequality Sign Rule states that when multiplying or dividing both sides of an inequality by a negative number, the direction of the inequality sign must be reversed."
+
+Absolute Value Equations: "The Absolute Value Equation Principle states that |x| = k means x = k or x = −k, so absolute value equations must be solved as two separate cases."
+
+Absolute Value Inequalities: "The Absolute Value Inequality Principle states that |x| < k means −k < x < k, and |x| > k means x < −k or x > k."
+
+Systems of Equations – Substitution: "The Substitution Principle states that if one equation expresses a variable in terms of another, that expression can be substituted into the second equation to reduce it to one variable."
+
+Systems of Equations – Elimination: "The Elimination Principle states that adding or subtracting two equations cancels one variable when its coefficients are equal and opposite, leaving a single equation in one variable."
+
+Polynomial Multiplication / FOIL: "The Distributive Property requires that each term in one polynomial must be multiplied by every term in the other polynomial."
+
+Factoring – GCF: "The GCF Factoring Principle states that the greatest common factor of all terms should be factored out first before any other factoring technique is applied."
+
+Factoring – Trinomials: "The Trinomial Factoring Principle states that a trinomial of the form x² + bx + c factors into (x + p)(x + q) where p and q multiply to c and add to b."
+
+Difference of Squares: "The Difference of Squares Principle states that a² − b² factors as (a + b)(a − b)."
+
+--- INTERMEDIATE ALGEBRA ---
+
+Quadratic Formula: "The Quadratic Formula states that for any equation of the form ax² + bx + c = 0, the solutions are x = (−b ± √(b² − 4ac)) / 2a."
+
+Completing the Square: "The Completing the Square Principle states that any quadratic can be rewritten in the form (x + h)² = k by adding the square of half the coefficient of x to both sides."
+
+Discriminant: "The Discriminant Principle states that for ax² + bx + c = 0, the value b² − 4ac determines the number of real solutions: positive means two solutions, zero means one, and negative means none."
+
+Function Composition: "The Function Composition Principle states that (f ∘ g)(x) = f(g(x)) — first apply g to the input, then apply f to that result."
+
+Inverse Functions: "The Inverse Function Principle states that the inverse of a function reverses its input and output, and can be found by swapping x and y and solving for y."
+
+Exponent Rules – Product: "The Product Rule for Exponents states that when multiplying powers with the same base, add the exponents: aᵐ × aⁿ = aᵐ⁺ⁿ."
+
+Exponent Rules – Quotient: "The Quotient Rule for Exponents states that when dividing powers with the same base, subtract the exponents: aᵐ ÷ aⁿ = aᵐ⁻ⁿ."
+
+Exponent Rules – Power: "The Power Rule for Exponents states that when raising a power to another power, multiply the exponents: (aᵐ)ⁿ = aᵐⁿ."
+
+Exponent Rules – Negative: "The Negative Exponent Principle states that a negative exponent means the reciprocal: a⁻ⁿ = 1/aⁿ."
+
+Exponential Growth/Decay: "The Exponential Growth and Decay Principle states that quantities that grow or shrink by a constant percentage over equal intervals follow the model y = a(1 ± r)ᵗ, where a is the initial value, r is the rate, and t is time."
+
+Logarithms – definition: "The Logarithm Principle states that logₐ(b) = c means aᶜ = b — a logarithm is the exponent to which the base must be raised to produce the given value."
+
+Arithmetic Sequences: "The Arithmetic Sequence Principle states that in an arithmetic sequence, each term is found by adding a constant difference d to the previous term, and the nth term is aₙ = a₁ + (n − 1)d."
+
+Geometric Sequences: "The Geometric Sequence Principle states that in a geometric sequence, each term is found by multiplying the previous term by a constant ratio r, and the nth term is aₙ = a₁ × rⁿ⁻¹."
+
+Radical Simplification: "The Radical Simplification Principle states that √(ab) = √a × √b, so a radical can be simplified by factoring out any perfect square from under the radical sign."
+
+Rational Expressions – Simplification: "The Rational Expression Simplification Principle states that common factors in the numerator and denominator of a rational expression can be cancelled, but only after fully factoring both."
+
+Rational Equations: "The Rational Equation Principle states that a rational equation can be solved by multiplying both sides by the least common denominator to eliminate all fractions, then checking for extraneous solutions that make any denominator equal to zero."
+
+--- COORDINATE GEOMETRY ---
+
+Slope Formula: "The Slope Formula states that the slope of a line through two points (x₁, y₁) and (x₂, y₂) is m = (y₂ − y₁) / (x₂ − x₁)."
+
+Slope-Intercept Form: "The Slope-Intercept Principle states that in the equation y = mx + b, m is the slope and b is the y-intercept."
+
+Parallel and Perpendicular Slopes: "The Parallel and Perpendicular Slope Principle states that parallel lines have equal slopes, and perpendicular lines have slopes that are negative reciprocals of each other."
+
+Distance Formula: "The Distance Formula states that the distance between two points (x₁, y₁) and (x₂, y₂) is d = √((x₂ − x₁)² + (y₂ − y₁)²)."
+
+Midpoint Formula: "The Midpoint Formula states that the midpoint of a segment with endpoints (x₁, y₁) and (x₂, y₂) is ((x₁ + x₂)/2, (y₁ + y₂)/2)."
+
+Vertex Form of a Parabola: "The Vertex Form Principle states that a parabola written as y = a(x − h)² + k has its vertex at (h, k), and the sign of a determines whether it opens up or down."
+
+Circle Equation: "The Standard Circle Equation Principle states that a circle with center (h, k) and radius r is written as (x − h)² + (y − k)² = r²."
+
+--- PLANE GEOMETRY ---
+
+Triangle Angle Sum: "The Triangle Angle Sum Principle states that the three interior angles of any triangle always add up to 180°."
+
+Supplementary Angles: "The Supplementary Angle Principle states that two angles are supplementary when they add up to 180°."
+
+Complementary Angles: "The Complementary Angle Principle states that two angles are complementary when they add up to 90°."
+
+Transversals – Parallel Lines: "The Parallel Lines Principle states that when a transversal crosses two parallel lines, alternate interior angles are equal, corresponding angles are equal, and co-interior angles are supplementary."
+
+Similar Triangles: "The Similar Triangle Principle states that when two triangles are similar, their corresponding angles are equal and their corresponding sides are proportional."
+
+Pythagorean Theorem: "The Pythagorean Theorem states that in a right triangle, the square of the hypotenuse equals the sum of the squares of the other two sides: a² + b² = c²."
+
+Special Right Triangles (45-45-90): "The 45-45-90 Triangle Principle states that in a 45-45-90 triangle, the legs are equal and the hypotenuse equals a leg times √2."
+
+Special Right Triangles (30-60-90): "The 30-60-90 Triangle Principle states that in a 30-60-90 triangle, if the short leg is x, the long leg is x√3 and the hypotenuse is 2x."
+
+Triangle Area: "The Triangle Area Principle states that the area of a triangle equals one-half the base times the height: A = ½bh."
+
+Circle – Circumference and Area: "The Circle Principle states that for a circle with radius r, the circumference is C = 2πr and the area is A = πr²."
+
+Arc Length and Sector Area: "The Arc and Sector Principle states that an arc or sector is a fraction of the full circle equal to the central angle divided by 360°."
+
+Inscribed Angle Theorem: "The Inscribed Angle Theorem states that an inscribed angle is exactly half the central angle that subtends the same arc."
+
+Volume – Prisms and Cylinders: "The Volume Principle states that the volume of any prism or cylinder equals the area of the base times the height."
+
+--- TRIGONOMETRY ---
+
+SOH-CAH-TOA: "The SOH-CAH-TOA Principle states that in a right triangle, sin(θ) = opposite/hypotenuse, cos(θ) = adjacent/hypotenuse, and tan(θ) = opposite/adjacent."
+
+Reciprocal Trig Functions: "The Reciprocal Function Principle states that csc(θ) = 1/sin(θ), sec(θ) = 1/cos(θ), and cot(θ) = 1/tan(θ)."
+
+Pythagorean Identity: "The Pythagorean Identity states that sin²(θ) + cos²(θ) = 1 for any angle θ."
+
+Trig Graphs – Amplitude and Period: "The Trig Graph Principle states that for y = a·sin(bx + c) or y = a·cos(bx + c), the amplitude is |a| and the period is 2π/|b|." When describing horizontal shifts (phase shifts) in any stem, answer choice, or explanation, always use plain directional language: "shifted X units to the left" or "shifted X units to the right." Never describe phase shift using cycle-position language such as "it crosses its midline at x = π/6" or "it reaches its maximum at x = π" — these phrasings are non-standard and confusing for students.
+
+Law of Sines: "The Law of Sines states that in any triangle, a/sin(A) = b/sin(B) = c/sin(C), where each side is paired with the angle opposite it."
+
+Law of Cosines: "The Law of Cosines states that c² = a² + b² − 2ab·cos(C), used when two sides and the included angle, or all three sides, are known."
+
+--- ENGLISH ---
+
+Clause Identification: For act_eng_clause_id questions at L1, use this exact explanation template and no more: "An independent clause has a subject and verb and can stand alone as a complete sentence. A dependent clause has a subordinating conjunction (e.g., because, while, when, although) and cannot stand alone. [State which type this clause is and why in one sentence.]" Do not write a paragraph. Do not restate both definitions after making the identification.
+
+Subject-Verb Agreement: "The Subject-Verb Agreement Principle states that a verb must agree in number with its subject — singular subjects take singular verbs, and plural subjects take plural verbs — regardless of any words that appear between them."
+
+Pronoun-Antecedent Agreement: "The Pronoun Agreement Principle states that a pronoun must match its antecedent in number and gender."
+
+Pronoun Case: "The Pronoun Case Principle states that subject pronouns (I, he, she, they, who) are used when the pronoun performs the action, and object pronouns (me, him, her, them, whom) are used when the pronoun receives it."
+
+Comma + FANBOYS: "The FANBOYS Principle states that when two independent clauses are joined by a coordinating conjunction (for, and, nor, but, or, yet, so), a comma must come before the conjunction."
+
+Semicolon between Independent Clauses: "The Semicolon Principle states that a semicolon can join two independent clauses without any conjunction."
+
+Comma Splice: "The Comma Splice Principle states that a comma alone cannot join two independent clauses — a coordinating conjunction, semicolon, or period is required."
+
+Apostrophe – Possessive: "The Possessive Apostrophe Principle states that to show ownership, add 's to a singular noun and just an apostrophe (or 's) to a plural noun that ends in s."
+
+Apostrophe – Contraction: "The Contraction Principle states that an apostrophe in a contraction marks the spot where letters have been omitted (e.g., it's = it is)."
+
+Parallelism: "The Parallelism Principle states that items in a list or paired comparison must use the same grammatical form."
+
+Introductory Element Comma: "The Introductory Comma Principle states that an introductory word, phrase, or clause at the start of a sentence must be followed by a comma before the main clause."
+
+Colon: "The Colon Principle states that a colon must be preceded by a complete independent clause and is used to introduce a list, explanation, or elaboration."
+
+Dangling Modifier: "The Dangling Modifier Principle states that an introductory modifier must describe the grammatical subject of the main clause immediately following it."
+
+Verb Tense Consistency: "The Tense Consistency Principle states that verb tenses within a passage should remain consistent unless there is a clear reason to shift — an unnecessary tense shift is an error."
+
+Redundancy: "The Redundancy Principle states that if two words or phrases convey the same meaning in the same sentence, one should be removed."
+
+6. OUTPUT FORMAT
+Return ONLY a JSON array. No preamble, no markdown fences, no commentary. Each object must have exactly these fields:
+{
+  "skill_slug": "${v.slug}",
+  "difficulty": ${v.level},
+  "question_type": "multiple_choice",
+  "stem": "the sentence or passage excerpt being tested — do NOT include answer choices here",
+  "option_a": "full text of option A",
+  "option_b": "full text of option B",
+  "option_c": "full text of option C",
+  "option_d": "full text of option D",
+  "correct_answer": "[use the letter from the ANSWER SEQUENCE for this question's position]",
+  "explanation": "full explanation text",
+  "distractor_a": "why a student who has not mastered this skill would pick A — blank if A is correct",
+  "distractor_b": "why a student who has not mastered this skill would pick B — blank if B is correct",
+  "distractor_c": "why a student who has not mastered this skill would pick C — blank if C is correct",
+  "distractor_d": "why a student who has not mastered this skill would pick D — blank if D is correct",
+  "source": "original"
+}
+
+Before outputting, verify five things:
+(1) All four answer options are distinct values. If any two options have the same value, the question is invalid — rewrite it so all four options are different. This applies to every question including probability questions — those are especially prone to duplicate values when multiple distractors involve failing to update the sample space.
+(2) Each distractor explanation describes an error that uniquely produces that specific answer value. Verify that the calculation described in the distractor note actually yields the answer shown — not a different option. If the described error would produce a different answer, fix either the answer value or the distractor explanation.
+(3) No two distractor notes describe error paths that lead to the same numerical result. If two described errors both produce the same wrong answer value — for example, two different ways of failing to update the sample space that both yield the same fraction — one must be rewritten with a distinct error path and a distinct answer value.
+(4) The stem, all four answer options, the correct answer field, and the explanation all describe the same question. If the explanation references different numbers or a different scenario than the stem, the question must be rewritten before outputting — never output a question where the explanation and stem are misaligned.
+(5) Read the conclusion of your explanation and identify the answer value it arrives at. Confirm that the correct_answer field contains the letter (A, B, C, or D) that matches that value in your option list. A mismatch between the explanation's conclusion and the correct_answer field is the single most common generation error — if they do not match, fix the correct_answer field before outputting.
+
+7. AVOID THESE PATTERNS — check every question against this list before outputting.
+
+ENGLISH:
+- Do not use distractors that are grammatically different but would be obviously wrong to any student who has studied the skill. Every wrong answer must represent an error students actually make — a genuine temptation, not just a structurally different option. For example, in a comma splice question, "remove the comma entirely" (creating a fused sentence) is only acceptable as a distractor if students plausibly make that specific error. If you cannot describe a real student making that mistake, replace the distractor.
+- For IC+IC punctuation questions (comma splice, fused sentence, semicolon, FANBOYS, transitional adverb), every question must have exactly one correct answer. Before finalizing, check every wrong answer choice: if a distractor would also correctly fix the underlined error, it is not a valid distractor — rewrite the sentence or replace the distractor. A period, a semicolon, and a comma+FANBOYS can all correctly join two independent clauses; you cannot offer more than one of these as answer choices unless the sentence is specifically constructed so that only one works in context (e.g., a conjunction is already present ruling out semicolon alone, or the logical relationship rules out a specific conjunction). Do not offer a single em dash or colon as a wrong answer for IC+IC questions unless the sentence context makes those options genuinely tempting and genuinely wrong.
+
+MATH:
+- For PEMDAS questions involving exponents: before finalizing distractors, verify that the "misplace the exponent onto a single term" error path and the "ignore the exponent entirely" error path produce numerically different results. These two errors frequently collapse to the same value and cannot both be used as distractors in the same question. Concrete example of the collision: in the expression 5 + (3−1)², "misplace exponent onto single term 3" gives 5 + 3² − 1 = 13, while "ignore exponent entirely" gives 5 + 3 − 1 = 7 — these are different, so both are usable. But in 3 + (2+1)², "misplace onto 2" gives 3 + 2² + 1 = 8, while "ignore exponent" gives 3 + 2 + 1 = 6 — still different, usable. Check the actual arithmetic before including both.
+- Do not use "arithmetic error," "calculation mistake," or "slip" as a distractor explanation. Every distractor must correspond to a specific wrong reasoning path — a named conceptual mistake the student makes before or instead of calculating. "The student adds instead of multiplies" is acceptable. "The student makes an arithmetic error" is not.
+- Do not write direct two-value comparison questions (e.g., "Which is greater: A or B?"). These yield at most three distinct answer categories (>, <, =) and cannot support four meaningful, non-redundant distractors. Any skill involving comparison, ordering, or binary classification must be framed in a format that naturally produces four distinct answer choices — for example, "which of these four values is greatest?", "which lies between X and Y?", or "which ordering is correct?" If distractors feel forced, it is a signal that the question format is wrong, not that the distractors need more creativity.
+- For ratio and proportion questions, distractor notes must describe specific wrong reasoning paths students actually use. Realistic errors include: inverting one ratio (writing 3/5 instead of 5/3), adding instead of cross-multiplying, misaligning the proportion setup (putting both numerators from the same category instead of matching categories across the equation), and using the wrong operation (dividing instead of multiplying or vice versa). Do not use vague distractor notes like "student guesses" or "student misreads the problem."
+- For fraction word problems and mixed number operations, do not use "partial completion" distractors where a student ignores either the whole number or the fractional component of a mixed number entirely — students virtually never do this. Instead, use distractors that reflect: (a) wrong operation — student divides when they should multiply, or adds instead of divides; (b) wrong conversion — student adds the whole number to the numerator instead of multiplying (e.g., 2 3/8 becomes 5/8 instead of 19/8); (c) wrong direction — student inverts the dividend instead of the divisor in a division problem; (d) arithmetic error on a specific step such as the final simplification.
+- For combining like terms questions, do not use distractors that require misreading a small digit (e.g., reading 2 as 4). Arithmetic-error distractors must be based on operation errors (adding instead of subtracting, wrong sign on a distributed term, multiplying instead of distributing) — not digit transcription errors.
+- When polynomial combination produces zero for a particular degree (e.g., x² terms all cancel), omit that term from all answer choices and from the explanation. Write "8x − 21" not "0x² + 8x − 21." Zero-coefficient terms in answer choices are non-standard and confusing.
+- For basic probability questions across a batch of 9, use a variety of contexts — spinners, marbles, tiles, numbered slips, candy jars, raffle tickets, surveys, and so on. No more than 2 questions in any single batch may use a standard playing card scenario, since students unfamiliar with deck structure are disadvantaged independently of their probability knowledge.
+- Do not use 10%, 25%, 50%, or 100% in percent problems — use non-round percentages like 15%, 35%, 60%, 80%
+- Do not use only positive integers — include negatives, fractions, or decimals in at least 30% of questions for skills where they are relevant
+- Do not vary questions only by swapping numbers — vary the operation structure, the number of steps, and the type of number used
+- Do not make level 3 questions by adding more of the same steps as level 2 — level 3 must introduce a genuine conceptual trap, not just more arithmetic
+- Do not generate all questions with the same structural template
+
+ENGLISH:
+- Do not place the underlined portion in the same position in every question
+- Do not make level 3 harder by making the sentence longer — make it harder by introducing genuine ambiguity between two plausible rules
+- Do not write distractors that are obviously wrong to any student — every distractor should be tempting to a student who has not mastered the skill
+
+ALL SECTIONS:
+- Do not write questions where the correct answer is identifiable by elimination without knowing the skill
+- Do not repeat the same sentence structure or scenario type more than once per batch`;
+}
+
+const MATH_RULES = `--- PRE-ALGEBRA ---
+
+Order of Operations (PEMDAS): "Expressions must be evaluated in this sequence: Parentheses, Exponents, Multiplication and Division (left to right), then Addition and Subtraction (left to right)."
+
+Integer Operations – multiplying/dividing negatives: "Multiplying or dividing two numbers with the same sign gives a positive result, and two numbers with opposite signs gives a negative result."
+
+Fraction Addition/Subtraction: "Fractions can only be added or subtracted after they have been converted to a common denominator."
+
+Fraction Multiplication: "To multiply fractions, multiply the numerators together and the denominators together."
+
+Fraction Division: "Dividing by a fraction is equivalent to multiplying by its reciprocal."
+
+Fraction Comparison (Part-to-Whole): "The fraction representing one part equals that part's value divided by the sum of all parts."
+
+Part-to-Part Ratio: "For every fixed amount of one part, a fixed proportional amount of the other part is required."
+
+Proportions – Direct: "When two situations share the same rate, the ratio of corresponding quantities must be equal."
+
+Percent Conversion: "A percent is a ratio out of 100, so dividing by 100 converts a percent to a decimal and multiplying by 100 converts a decimal to a percent."
+
+Percent Of: "To find a percent of a quantity, convert the percent to a decimal and multiply by the whole."
+
+Percent Change: "Percent change equals the difference between the new and original values divided by the original value, multiplied by 100."
+
+Reverse Percent: "When a percent of an unknown whole equals a known value, divide the known value by the percent (as a decimal) to find the whole."
+
+Absolute Value: "The absolute value of a number is its distance from zero on the number line, so it is always non-negative."
+
+GCF/LCM: "The greatest common factor (GCF) of two numbers is the largest integer that divides both evenly, and the least common multiple (LCM) is the smallest integer that both divide into evenly."
+
+Scientific Notation: "A number in scientific notation is written as a value between 1 and 10 multiplied by a power of 10."
+
+Mean: "The mean of a data set equals the sum of all values divided by the number of values."
+
+Median: "The median is the middle value when all values are arranged in order; for an even number of values, it is the average of the two middle values."
+
+Weighted Average: "When groups of different sizes are combined, the overall average equals the sum of each group's (size × average) divided by the total number of values."
+
+Multiplication Principle (Counting): "When a process has multiple independent stages, the total number of outcomes equals the product of the number of choices at each stage. Multiplication applies — rather than addition — because both choices must be made together, so each option at one stage pairs with every option at the next." The explanation must then explicitly state why multiplication (not addition) applies to the specific question — name the independent stages and what makes them independent.
+
+Combinations: "The number of ways to choose k items from n items when order does not matter is C(n,k) = n! / (k!(n−k)!)."
+
+Basic Probability: "The probability of an event equals the number of favorable outcomes divided by the total number of possible outcomes. After stating this rule, the explanation must explicitly show how each number in P = favorable / total was determined — state the favorable count, state the total count, and show the fraction before simplifying. Do not skip directly to the simplified answer."
+
+Probability – And (independent events): "The probability of two independent events both occurring equals the product of their individual probabilities."
+
+Probability – Or (mutually exclusive): "The probability of either of two mutually exclusive events occurring equals the sum of their individual probabilities."
+
+Probability – Or (non-mutually exclusive): "The probability of either of two events occurring equals the sum of their individual probabilities minus the probability of both occurring."
+
+--- ELEMENTARY ALGEBRA ---
+
+Combining Like Terms: "Only terms with identical variable parts can be combined by adding or subtracting their coefficients."
+
+Distributive Property: "a(b + c) = ab + ac — every term inside the parentheses must be multiplied by the factor outside."
+
+Solving Linear Equations: "Any operation applied to one side of an equation must be applied to the other side to maintain equality."
+
+Inequalities – flipping the sign: "When multiplying or dividing both sides of an inequality by a negative number, the direction of the inequality sign must be reversed."
+
+Absolute Value Equations: "|x| = k means x = k or x = −k, so absolute value equations must be solved as two separate cases."
+
+Absolute Value Inequalities: "|x| < k means −k < x < k, and |x| > k means x < −k or x > k."
+
+Systems of Equations – Substitution: "If one equation expresses a variable in terms of another, that expression can be substituted into the second equation to reduce it to one variable."
+
+Systems of Equations – Elimination: "Adding or subtracting two equations cancels one variable when its coefficients are equal and opposite, leaving a single equation in one variable."
+
+Polynomial Multiplication / FOIL: "Each term in one polynomial must be multiplied by every term in the other polynomial."
+
+Factoring – GCF: "The greatest common factor of all terms should be factored out first before any other factoring technique is applied."
+
+Factoring – Trinomials: "A trinomial of the form x² + bx + c factors into (x + p)(x + q) where p and q multiply to c and add to b."
+
+Difference of Squares: "a² − b² factors as (a + b)(a − b)."
+
+--- INTERMEDIATE ALGEBRA ---
+
+Quadratic Formula: "For any equation of the form ax² + bx + c = 0, the solutions are x = (−b ± √(b² − 4ac)) / 2a."
+
+Completing the Square: "Any quadratic can be rewritten in the form (x + h)² = k by adding the square of half the coefficient of x to both sides."
+
+Discriminant: "For ax² + bx + c = 0, the value b² − 4ac determines the number of real solutions: positive means two solutions, zero means one, and negative means none."
+
+Function Composition: "(f ∘ g)(x) = f(g(x)) — first apply g to the input, then apply f to that result."
+
+Inverse Functions: "The inverse of a function reverses its input and output, and can be found by swapping x and y and solving for y."
+
+Exponent Rules – Product: "When multiplying powers with the same base, add the exponents: aᵐ × aⁿ = aᵐ⁺ⁿ."
+
+Exponent Rules – Quotient: "When dividing powers with the same base, subtract the exponents: aᵐ ÷ aⁿ = aᵐ⁻ⁿ."
+
+Exponent Rules – Power: "When raising a power to another power, multiply the exponents: (aᵐ)ⁿ = aᵐⁿ."
+
+Exponent Rules – Negative: "A negative exponent means the reciprocal: a⁻ⁿ = 1/aⁿ."
+
+Exponential Growth/Decay: "Quantities that grow or shrink by a constant percentage over equal intervals follow the model y = a(1 ± r)ᵗ, where a is the initial value, r is the rate, and t is time."
+
+Logarithms – definition: "logₐ(b) = c means aᶜ = b — a logarithm is the exponent to which the base must be raised to produce the given value."
+
+Arithmetic Sequences: "In an arithmetic sequence, each term is found by adding a constant difference d to the previous term, and the nth term is aₙ = a₁ + (n − 1)d."
+
+Geometric Sequences: "In a geometric sequence, each term is found by multiplying the previous term by a constant ratio r, and the nth term is aₙ = a₁ × rⁿ⁻¹."
+
+Radical Simplification: "√(ab) = √a × √b, so a radical can be simplified by factoring out any perfect square from under the radical sign."
+
+Rational Expressions – Simplification: "Common factors in the numerator and denominator of a rational expression can be cancelled, but only after fully factoring both."
+
+Rational Equations: "A rational equation can be solved by multiplying both sides by the least common denominator to eliminate all fractions, then checking for extraneous solutions that make any denominator equal to zero."
+
+--- COORDINATE GEOMETRY ---
+
+Slope Formula: "The slope of a line through two points (x₁, y₁) and (x₂, y₂) is m = (y₂ − y₁) / (x₂ − x₁)."
+
+Slope-Intercept Form: "In the equation y = mx + b, m is the slope and b is the y-intercept."
+
+Parallel and Perpendicular Slopes: "Parallel lines have equal slopes, and perpendicular lines have slopes that are negative reciprocals of each other."
+
+Distance Formula: "The distance between two points (x₁, y₁) and (x₂, y₂) is d = √((x₂ − x₁)² + (y₂ − y₁)²)."
+
+Midpoint Formula: "The midpoint of a segment with endpoints (x₁, y₁) and (x₂, y₂) is ((x₁ + x₂)/2, (y₁ + y₂)/2)."
+
+Vertex Form of a Parabola: "A parabola written as y = a(x − h)² + k has its vertex at (h, k), and the sign of a determines whether it opens up or down."
+
+Circle Equation: "A circle with center (h, k) and radius r is written as (x − h)² + (y − k)² = r²."
+
+--- PLANE GEOMETRY ---
+
+Triangle Angle Sum: "The three interior angles of any triangle always add up to 180°."
+
+Supplementary Angles: "Two angles are supplementary when they add up to 180°."
+
+Complementary Angles: "Two angles are complementary when they add up to 90°."
+
+Transversals – Parallel Lines: "When a transversal crosses two parallel lines, alternate interior angles are equal, corresponding angles are equal, and co-interior angles are supplementary."
+
+Similar Triangles: "When two triangles are similar, their corresponding angles are equal and their corresponding sides are proportional."
+
+Pythagorean Theorem: "In a right triangle, the square of the hypotenuse equals the sum of the squares of the other two sides: a² + b² = c²."
+
+Special Right Triangles (45-45-90): "In a 45-45-90 triangle, the legs are equal and the hypotenuse equals a leg times √2."
+
+Special Right Triangles (30-60-90): "In a 30-60-90 triangle, if the short leg is x, the long leg is x√3 and the hypotenuse is 2x."
+
+Triangle Area: "The area of a triangle equals one-half the base times the height: A = ½bh."
+
+Circle – Circumference and Area: "For a circle with radius r, the circumference is C = 2πr and the area is A = πr²."
+
+Arc Length and Sector Area: "An arc or sector is a fraction of the full circle equal to the central angle divided by 360°."
+
+Inscribed Angle Theorem: "An inscribed angle is exactly half the central angle that subtends the same arc."
+
+Volume – Prisms and Cylinders: "The volume of any prism or cylinder equals the area of the base times the height."
+
+--- TRIGONOMETRY ---
+
+SOH-CAH-TOA: "In a right triangle, sin(θ) = opposite/hypotenuse, cos(θ) = adjacent/hypotenuse, and tan(θ) = opposite/adjacent."
+
+Reciprocal Trig Functions: "csc(θ) = 1/sin(θ), sec(θ) = 1/cos(θ), and cot(θ) = 1/tan(θ)."
+
+Pythagorean Identity: "sin²(θ) + cos²(θ) = 1 for any angle θ."
+
+Trig Graphs – Amplitude and Period: "For y = a·sin(bx + c) or y = a·cos(bx + c), the amplitude is |a| and the period is 2π/|b|." When describing horizontal shifts (phase shifts) in any stem, answer choice, or explanation, always use plain directional language: "shifted X units to the left" or "shifted X units to the right." Never describe phase shift using cycle-position language such as "it crosses its midline at x = π/6" or "it reaches its maximum at x = π" — these phrasings are non-standard and confusing for students.
+
+Law of Sines: "In any triangle, a/sin(A) = b/sin(B) = c/sin(C), where each side is paired with the angle opposite it."
+
+Law of Cosines: "c² = a² + b² − 2ab·cos(C), used when two sides and the included angle, or all three sides, are known."`;
+
+const ENG_RULES = `Clause Identification: For act_eng_clause_id questions at every level, use this exact explanation template and no more: "An independent clause has a subject and verb and can stand alone as a complete sentence. A dependent clause has a subordinating conjunction (e.g., because, while, when, although) and cannot stand alone. [State which type this clause is and why in one sentence.]" Do not write a paragraph. Do not restate both definitions after making the identification.
+
+Subject-Verb Agreement: "A verb must agree in number with its subject — singular subjects take singular verbs, and plural subjects take plural verbs — regardless of any words that appear between them."
+
+Pronoun-Antecedent Agreement: "A pronoun must match its antecedent in number and gender."
+
+Pronoun Case: "Subject pronouns (I, he, she, they, who) are used when the pronoun performs the action, and object pronouns (me, him, her, them, whom) are used when the pronoun receives it."
+
+Comma + FANBOYS: "When two independent clauses are joined by a coordinating conjunction (for, and, nor, but, or, yet, so), a comma must come before the conjunction."
+
+Semicolon between Independent Clauses: "A semicolon can join two independent clauses without any conjunction."
+
+Comma Splice: "A comma alone cannot join two independent clauses — a coordinating conjunction, semicolon, or period is required."
+
+Apostrophe – Possessive: "To show ownership, add 's to a singular noun and just an apostrophe (or 's) to a plural noun that ends in s."
+
+Apostrophe – Contraction: "An apostrophe in a contraction marks the spot where letters have been omitted (e.g., it's = it is)."
+
+Parallelism: "Items in a list or paired comparison must use the same grammatical form."
+
+Introductory Element Comma: "An introductory word, phrase, or clause at the start of a sentence must be followed by a comma before the main clause."
+
+Colon: "A colon must be preceded by a complete independent clause and is used to introduce a list, explanation, or elaboration."
+
+Dangling Modifier: "An introductory modifier must describe the grammatical subject of the main clause immediately following it."
+
+Verb Tense Consistency: "Verb tenses within a passage should remain consistent unless there is a clear reason to shift — an unnecessary tense shift is an error."
+
+Redundancy: "If two words or phrases convey the same meaning in the same sentence, one should be removed."`;
+
+// ── Prompt builder (v16): English and Math follow the October 2026 revision standard.
+// Reading and Science still use the earlier prompt (buildTextLegacy) until they get their own review.
+const RETIRED_SKILLS = {
+  'act_eng_wc_idiom': 'Idiomatic-usage items were dropped from the ACT in the 2026 design framework. This skill is retired; do not generate new questions for it.',
+  'act_eng_org_para_order': 'Whole-paragraph ordering items were dropped from the ACT in the 2026 design framework. This skill is retired; do not generate new questions for it.'
+};
+
+const ENG_RHETORICAL = ['act_eng_org_goal','act_eng_org_relevance_add','act_eng_org_relevance_del','act_eng_org_sentence_place','act_eng_org_trans_para','act_eng_org_open_close'];
+
+function sequenceNote(v) {
+  if (v.section === 'ACT Math') {
+    return `Numeric answer choices are listed in ascending order (see MATH FORMAT), so choose the three wrong-answer values so that the correct value lands on the assigned letter once the four options are sorted: for A, all three wrong answers are larger than the correct answer; for B, one is smaller and two are larger; for C, two are smaller and one is larger; for D, all three are smaller. For expression options, order them by a natural progression and place the correct one at the assigned letter.`;
+  }
+  if (v.section === 'ACT English') {
+    return `For questions where the sequence assigns A, the original wording is correct and the answer is NO CHANGE. Released forms have NO CHANGE correct on about 28% of items, and the sequence keeps each batch close to that.`;
+  }
+  return '';
+}
+
+function buildText(v) {
+  if (v.section !== 'ACT English' && v.section !== 'ACT Math') return buildTextLegacy(v);
+  if (RETIRED_SKILLS[v.slug]) throw new Error(RETIRED_SKILLS[v.slug]);
+  const sd = SKILL_DEFS[v.slug];
+  const defText = sd ? sd[getLevelKey(v.level)] : '[definition not found — check slug]';
+  const levelName = getLevelName(v.level);
+  const isEng = v.section === 'ACT English';
+  const isMath = v.section === 'ACT Math';
+  const twoChoice = v.slug === 'act_eng_clause_id';
+  const rhetorical = ENG_RHETORICAL.includes(v.slug);
+  const semicolonSkill = v.slug === 'act_eng_clause_ic_ic_semicolon';
+
+  const ENG_FORMAT = `ENGLISH FORMAT (enhanced ACT, 2025 and later)
+- Write each item as one or two sentences of ACT-style passage prose: informative or narrative writing about people, places, history, science, or the arts. No diary-style filler ("My brother trains every morning") and no conversational phrasing.
+- Mark the underlined portion with underscores, _like this_. Vary where the underlined portion falls in the sentence across the batch.
+- Every item has a question stem after the sentence. Use the released wording:
+  - Grammar, usage, and punctuation: "Which choice makes the sentence most grammatically acceptable?" When a period is among the options, write "the sentence or sentences" instead of "the sentence."
+  - Transitions: "Which transition word or phrase is most logical in context?"
+  - Goal and wording items: "Given that all the choices are accurate, which one…" followed by the specific goal.
+  - Add or delete: "Should the writer make this addition here?" (or "…delete the underlined sentence?") with options in the form "Yes, because…" / "No, because…" (or "Kept, because…" / "Deleted, because…").
+  - Sentence placement: "For the sake of logic and cohesion, Sentence X should be placed:" with four placements, the first being "where it is now."
+  - Paragraph transitions: give a short two-paragraph excerpt and ask about the sentence that connects them. Do not summarize the next paragraph instead of showing it.
+${twoChoice ? `- This skill (act_eng_clause_id) is a skill-building exception: every item has exactly two options, A "Independent" and B "Dependent." Leave option_c and option_d blank. Do not use NO CHANGE.` : rhetorical ? `- This is a rhetorical-skills item. Use the stem and option format above for its item type. Use NO CHANGE as option A only for items where the underlined text could stay as written.` : `- Option A is "NO CHANGE" (the original underlined text, unchanged). Options B, C, and D reproduce only the underlined portion, rewritten.`}
+- Options may change wording, not just punctuation (released forms use rewrites like "silver, it was" or "silver being"). Every option must be a plausible edit; no filler options like "power, and, the".
+- For a missing element (a missing comma or conjunction), you may insert a caret ^ at the insertion point; option A is then NO CHANGE (no insertion).
+- Do not write idiomatic-preposition items, NOT/LEAST/EXCEPT stems, or whole-paragraph ordering items. These were dropped from the ACT in the 2026 design framework.
+
+ENGLISH CONTENT RULES
+- Clause joining (splice, fused sentence, semicolon, comma + FANBOYS, transitional adverb): build the sentence so exactly one option is correct. Never offer two valid fixes: a period and a semicolon, a semicolon and a colon before an explanatory second clause, or a semicolon and ", and" all work in the same spot. Colons and dashes appear as distractors only where they are wrong.
+- Clause-joining distractors, most to least common on released forms: a comma splice where the second clause starts with a new subject or pronoun; a period that creates a fragment; a fused sentence; a comma before a conjunctive adverb ("however," "therefore"); a relative-pronoun or "-ing" rewrite. A colon + "and" is occasional.
+- Never use a semicolon followed by a coordinating conjunction ("; and", "; but", "; so") in any option. It does not appear on any recent form.
+- The semicolon is more often the trap than the answer: on recent forms it is correct on 2 of the 24 items that offer it.${semicolonSkill ? ` In this semicolon batch, make the semicolon the correct answer on no more than about 40% of the questions (about 3 or 4 of 9). The rest teach where a semicolon fails: before a phrase, before or after a dependent clause, or inside a single clause, where the correct answer is a comma, no punctuation, or a period.` : ''}
+- Verb tense: never offer both the simple past and the past perfect when both would work; give a clear cue ("By the time…") or leave one out. Vary the tense of the correct answer so the simple present is not always right.
+- Irregular verbs: test the past vs. the past participle ("had ran," "has sang," "would have began"), not invented forms nobody writes ("buyed," "goed").
+- Commonly confused words: prefer the pairs on recent forms (its/it's, than/then, past/passed, complement/compliment, who's/whose, affect/effect). Avoid usage points that authorities disagree on ("comprised of").
+- Tone items: distractors mix too-casual wording with formal-sounding wording that has the wrong meaning or is overblown. No joke options.`;
+
+  const MATH_FORMAT = `MATH FORMAT (ACT Math section)
+- Word problems by default for applied skills (proportions, percents, rates, statistics, probability, geometry measurement). Pure symbolic items are fine for skills that are symbolic on the ACT (simplifying, factoring, solving equations).
+- Stems are short and declarative, the way the ACT writes them: "What is the value of x?", "Which of the following is equivalent to…?", "How many…?" Put units in the question ("How many miles…"), not in a parenthetical instruction.
+- A calculator is allowed. Do not build difficulty on arithmetic a calculator does. Difficulty comes from setup: choosing the operation, setting up the proportion, translating words to an equation, recognizing structure.
+- Option order: numeric options in ascending order (descending only when the ACT would, such as all negative values). Expression options in a natural progression (for example, by constant term).
+- Formatting (plain text that renders cleanly): use x², √, π, ≤, ≥, and the minus sign −. Write fractions as a/b, with parentheses wherever a reader could misgroup them, e.g. (2x + 1)/3 and (1/2)x. Mixed numbers as "2 1/4" with a space. Money options with $ and two decimals where cents matter; numbers of 1,000 or more with commas. No zero-coefficient terms (write 8x − 21, not 0x² + 8x − 21). Answers in terms of π are written with π; do not add "Leave your answer in terms of π."
+- Coordinate questions say "in the standard (x,y) coordinate plane."
+- Law of sines and law of cosines items include the formula in a note at the end of the stem, as the ACT does: "(Note: The law of sines states that sin A/a = sin B/b = sin C/c.)" Never use the ambiguous case (SSA with two possible triangles).
+- Figures: if the question needs a figure (most geometry items with angles, shapes, or labeled points), keep it as a figure question; do not rewrite it to work from words alone. Fill the "figure" field with "FIGURE NEEDED: " followed by an exact description of what to draw: every point label, segment, angle mark, and given measure, and whether it is drawn to scale. Make sure the setup can exist with the numbers given (angles sum correctly, points fall in the stated order). Leave "figure" blank when no figure is needed.
+- Answer key check: solve each question yourself before writing the explanation, and compute every distractor's value from the error described in its note. If you have a code tool available, use it to compute the correct answer and each distractor value.`;
+
+  return `You are an expert ACT test question writer with deep knowledge of how the ACT is structured and how students make mistakes.
+
+Generate ${v.count} multiple choice ACT-style questions for the following skill at difficulty level ${v.level} only.
+
+SECTION: ${v.section}
+SKILL SLUG: ${v.slug}
+SKILL NAME: ${v.name}
+SKILL DESCRIPTION: ${v.desc}
+DIFFICULTY LEVEL: ${levelName}
+DIFFICULTY DEFINITION: ${defText}
+ANSWER SEQUENCE: ${currentSequence.join(", ")} (question 1 uses the first letter as its correct answer, question 2 the second, and so on; write each question so that the specified letter is correct)${twoChoice ? ' For this two-option skill, treat C as A and D as B.' : ''}
+${sequenceNote(v)}
+
+All ${v.count} questions must be at difficulty level ${v.level}. Do not mix difficulty levels.
+
+STRICT REQUIREMENTS:
+
+1. SKILL ISOLATION AND ONE ANSWER
+Every question tests ONLY this skill. A student who has mastered the skill should get it right; a student who has not should plausibly get it wrong. Do not require other rules or concepts.
+Exactly one defensible answer. Before finalizing, test every wrong option: could a strong student argue it is also right? If yes, replace it.
+${twoChoice ? 'Options must be distinct.' : 'Four options, all distinct in value and in wording: no 3/4 and 0.75 as separate options, and no two options that simplify to the same thing.'}
+
+2. ${isEng ? ENG_FORMAT : MATH_FORMAT}
+
+3. DIFFICULTY
+Every question must match this definition exactly: ${defText}
+General level rules: L1 = one rule, clean presentation, one step. L2 = the student must identify the structure first, or take two steps; distractors are near-misses. L3 = two rules that both seem to apply, or an unusual or embedded context. Longer is not harder: do not make L3 by adding more of the same steps or a longer sentence.
+
+4. DISTRACTORS
+Each wrong answer comes from a specific, realistic student error. Banned: arithmetic slips nobody makes ("5 + 3 = 6"), digit misreads, "forgets half of a mixed number," random or merely nearby values, and options that are absurd at a glance (a total smaller than one of its parts, a probability above 1).
+${isMath ? `Useful sources of Math errors: wrong operation order, sign errors, stopping at an intermediate step, the wrong formula or rule, a flipped ratio, part:part used against a total, and a repeated given number. For proportions, released items most often use stopping at an intermediate value or the wrong unit; adding instead of scaling is rare (at most 1 per batch).` : `Useful sources of English errors: the right rule applied in the wrong place, two similar-sounding rules confused, over-correcting (punctuation where none is needed), and an option that fixes one error but introduces another.`}
+Vary the error types across the batch; the same three distractor recipes in every question teaches the pattern instead of the skill.
+The correct answer must not be identifiable by length, by being the only "nice" number, or by being the only option in the right range.
+Contexts: neutral and school-appropriate. No more than 2 of the ${v.count} questions share a context type (cards, recipes, maps, sports, and so on).
+
+DISTRACTOR NOTES: one sentence each, starting with what the student does. No category labels at the start ("Partial completion:", "Wrong formula applied:"). Leave the note for the correct option blank.
+Bad note: "Wrong operation order: students who don't know PEMDAS might pick this."
+Good note: "Adds 2 + 3 before squaring, so computes 5² = 25 instead of 2 + 9 = 11."
+
+5. EXPLANATIONS
+Three parts, in plain language a student can follow without a tutor:
+(1) The rule, stated in one sentence. Do not invent a named "Principle" ("The Composite Area Principle states that…"); just state the rule. Use the rule statements in 5b as the reference wording when the skill matches one.
+(2) The work for this question, shown once and correctly.
+(3) The most tempting wrong answer and why it is wrong, in one or two sentences. Refer to the wrong answer by its value or wording, never by its letter.
+Length: 40–90 words at L1, up to about 130 words at L3.
+The explanation field contains only the final, clean explanation. Never show working, self-correction, or rechecking ("let me recheck…", "wait…", "hmm"). If you find yourself revising mid-explanation, the question's numbers, options, or key were set up wrong: rebuild the whole question, then write the explanation cleanly.
+
+5b. RULE STATEMENTS
+When the skill involves one of the rules below, state it in one plain sentence at the start of the explanation. Use these as the reference wording; small changes that make the sentence fit the question are fine. If the skill is not listed, state the rule naturally.
+
+${isEng ? ENG_RULES : MATH_RULES}
+
+6. OUTPUT FORMAT
+Return ONLY a JSON array. No preamble, no markdown fences, no commentary. Each object must have exactly these fields:
+{
+  "skill_slug": "${v.slug}",
+  "difficulty": ${v.level},
+  "question_type": "multiple_choice",
+  "stem": "${isEng ? 'the sentence or short excerpt with the underlined portion marked _like this_, followed by the question stem' : 'the full question text'} (do NOT include answer choices here)",
+  "option_a": "full text of option A",
+  "option_b": "full text of option B",
+  "option_c": "${twoChoice ? 'blank for this skill' : 'full text of option C'}",
+  "option_d": "${twoChoice ? 'blank for this skill' : 'full text of option D'}",
+  "correct_answer": "[the letter from the ANSWER SEQUENCE for this question's position]",
+  "explanation": "rule, work, most tempting wrong answer",
+  "distractor_a": "one sentence starting with what the student does; blank if A is correct",
+  "distractor_b": "one sentence starting with what the student does; blank if B is correct",
+  "distractor_c": "one sentence starting with what the student does; blank if C is correct",
+  "distractor_d": "one sentence starting with what the student does; blank if D is correct",
+  "figure": "${isMath ? 'blank, or FIGURE NEEDED: followed by an exact description' : 'blank'}",
+  "source": "original"
+}
+
+Before outputting, verify each question:
+(1) All options are distinct values and wordings.
+(2) Each distractor note describes an error that produces exactly that option's value or wording, and no two notes lead to the same result.
+(3) The stem, options, correct_answer, and explanation all describe the same question.
+(4) The value the explanation arrives at is the option at the correct_answer letter. A mismatch here is the single most common generation error.
+(5) ${isMath ? 'Numeric options are in ascending order and the correct value sits at the assigned letter.' : 'No option other than the key would also be acceptable in context.'}
+(6) No explanation or note refers to an option by its letter, and none contains drafting or self-correction.
+
+7. AVOID THESE PATTERNS
+${isMath ? `- Do not use "arithmetic error," "calculation mistake," or "slip" as a distractor note. Every distractor is a specific wrong reasoning path.
+- Do not write direct two-value comparison questions ("Which is greater: A or B?"). Frame comparisons so they produce four distinct answers ("Which of these four values is greatest?", "Which lies between X and Y?").
+- For PEMDAS questions with exponents, check that "applies the exponent to one term" and "ignores the exponent" give different values before using both.
+- For fraction and mixed-number problems, use wrong operation, wrong conversion (2 3/8 becomes 5/8 instead of 19/8), or inverting the wrong fraction; not "ignores the whole number."
+- Do not use 10%, 25%, 50%, or 100% in percent problems; use percents like 15%, 35%, 60%, or 80%.
+- Include negatives, fractions, or decimals in at least 30% of questions for skills where they are relevant.
+- For basic probability, use a variety of contexts (spinners, marbles, tiles, numbered slips, raffle tickets, surveys); no more than 2 card questions per batch.
+- Do not vary questions only by swapping numbers; vary the structure, the number of steps, and the type of number.` : `- Do not use distractors that any student who has studied the skill would reject at a glance. If you cannot describe a student making that mistake, replace the distractor.
+- Do not make L3 harder by making the sentence longer; make it harder with two rules that both seem to apply.`}
+- Do not write questions where the correct answer can be found by elimination without knowing the skill.
+- Do not repeat the same sentence structure or scenario type more than once per batch.`;
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function f(val, ph) { return val ? `<span class="pf">${esc(val)}</span>` : `<span class="pe">[${ph}]</span>`; }
+function fl(val, ph) { return val ? `<span class="pd${val}">${esc(getLevelName(val))}</span>` : `<span class="pe">[${ph}]</span>`; }
+
+function update() {
+  const v = vals();
+  const sd = SKILL_DEFS[v.slug];
+
+  // Update definition panel
+  const defBody = document.getElementById('def-body');
+  if (!v.slug && !v.level) {
+    defBody.innerHTML = '<div class="def-empty">Enter a slug and select a difficulty level.</div>';
+  } else if (v.slug && RETIRED_SKILLS[v.slug]) {
+    defBody.innerHTML = `<div class="def-error">${esc(RETIRED_SKILLS[v.slug])}</div>`;
+  } else if (v.slug && !sd) {
+    defBody.innerHTML = '<div class="def-error">Slug not found — check spelling against taxonomy column E.</div>';
+  } else if (!v.level) {
+    defBody.innerHTML = '<div class="def-empty">Select a difficulty level above.</div>';
+  } else if (!v.slug) {
+    defBody.innerHTML = '<div class="def-empty">Enter the skill slug to see the definition.</div>';
+  } else {
+    const defText = sd[getLevelKey(v.level)];
+    defBody.innerHTML = `
+      <div class="def-level-tag ${getLevelClass(v.level)}">Level ${v.level} — ${['','Foundational','Standard','Hard'][v.level]}</div>
+      <div class="def-text">${esc(defText)}</div>`;
+  }
+
+  // Prompt preview
+  const sd_def = sd && v.level ? esc(sd[getLevelKey(v.level)]) : '<span class="pe">[enter slug + select level]</span>';
+  document.getElementById('prompt-box').innerHTML =
+    `<span class="pm">You are an expert ACT test question writer...\n\n</span>` +
+    `Generate <span class="pf">${v.count}</span> questions for the following skill at difficulty level ${fl(v.level,'select level')} only.\n\n` +
+    `SECTION: ${f(v.section,'select section')}\n` +
+    `SKILL SLUG: ${f(v.slug,'taxonomy col E')}\n` +
+    `SKILL NAME: ${f(v.name,'taxonomy col D')}\n` +
+    `SKILL DESCRIPTION: ${f(v.desc,'taxonomy col D scope note')}\n` +
+    `DIFFICULTY LEVEL: ${fl(v.level,'select level')}\n` +
+    `DIFFICULTY DEFINITION: ${sd_def}\n` +
+    `ANSWER SEQUENCE: <span class="pf">${currentSequence.join(", ")}</span>\n\n` +
+    `<span class="pf">All ${v.count} questions must be at difficulty level ${v.level || '?'}. Do not mix difficulty levels.</span>\n\n` +
+    `<span class="pm">STRICT REQUIREMENTS:\n\n` +
+    `1. SKILL ISOLATION\n` +
+    `2. QUESTION FORMAT — ` + (v.section === 'ACT English'
+      ? `<span class="pf">Enhanced ACT English format: underlined portion, released stem wording, option A = NO CHANGE (correct when the sequence assigns A)</span>`
+      : v.section === 'ACT Math' ? `<span class="pf">ACT Math format: short stems, options in ascending order, a/b fractions, figure descriptions</span>` : `earlier prompt (Reading and Science have not been revised yet)`) + `\n` +
+    `3. DIFFICULTY — every question must match: ${sd_def}\n` +
+    `4. DISTRACTORS (one-sentence notes)\n5. EXPLANATIONS (rule, work, most tempting wrong answer)\n6. OUTPUT FORMAT (JSON array)\n` +
+    `[full requirements in copied prompt]</span>`;
+
+  // Status
+  const missing = [['section',v.section],['slug',v.slug],['name',v.name],['description',v.desc],['difficulty level',v.level]]
+    .filter(([,val])=>!val).map(([k])=>k);
+  const bar = document.getElementById('status-bar');
+  if (RETIRED_SKILLS[v.slug]) { bar.innerHTML = `<span><span class="status-dot dot-missing"></span>Retired skill: not on the 2026 ACT</span>`; return; }
+  bar.innerHTML = missing.length === 0
+    ? `<span><span class="status-dot dot-ok"></span>Ready to copy</span>`
+    : `<span><span class="status-dot dot-missing"></span>Missing: ${missing.join(', ')}</span>`;
+}
+
+function copyPrompt() {
+  const v = vals();
+  if (!v.level) { alert('Please select a difficulty level first.'); return; }
+  let text;
+  try {
+    text = buildText(v);
+  } catch(e) {
+    alert('Error building prompt: ' + e.message);
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 8l4 4 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied`;
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"/></svg> Copy prompt`;
+    }, 2500);
+  }).catch(e => {
+    alert('Copy failed: ' + e.message);
+  });
+}
+
+function resetFields() {
+  document.getElementById('in-section').value = '';
+  document.getElementById('in-slug').value = '';
+  document.getElementById('in-name').value = '';
+  document.getElementById('in-desc').value = '';
+  document.getElementById('in-count').value = 9;
+  selectedLevel = null;
+  [1,2,3].forEach(i => document.getElementById(`btn-${i}`).className = 'diff-btn');
+  update();
+}
+
+// ── Answer sequence functions ────────────────────────────────────────────
+let currentSequence = [];
+
+function generateSequence(count) {
+  const letters = ['A','B','C','D'];
+  let pool = [];
+  while (pool.length < count) {
+    const set = [...letters].sort(() => Math.random() - 0.5);
+    pool = pool.concat(set);
+  }
+  return pool.slice(0, count);
+}
+
+function reshuffleSequence() {
+  const count = parseInt(document.getElementById('in-count').value) || 9;
+  currentSequence = generateSequence(count);
+  renderSequence();
+  update();
+}
+
+function renderSequence() {
+  const el = document.getElementById('seq-display');
+  if (!el) return;
+  const colors = {A:'var(--green)',B:'var(--accent)',C:'var(--yellow)',D:'var(--red)'};
+  el.innerHTML = currentSequence.map((letter, i) =>
+    `<span style="color:${colors[letter]};margin-right:6px">${i+1}:${letter}</span>`
+  ).join('');
+}
+
+// Initialize sequence on load
+currentSequence = generateSequence(parseInt(document.getElementById('in-count').value) || 9);
+renderSequence();
+update();
+
+// Reshuffle when count changes
+document.getElementById('in-count').addEventListener('change', () => {
+  currentSequence = generateSequence(parseInt(document.getElementById('in-count').value) || 9);
+  renderSequence();
+  update();
+});
+// ── Output checks (v16) ──────────────────────────────────────────────────
+// Step 4: paste Claude's JSON here. The page flags problems the revision found most often,
+// and builds a blind-solve prompt for a fresh chat to catch wrong keys.
+function parseBatch(raw) {
+  raw = (raw || '').trim();
+  if (!raw) throw new Error('Nothing pasted yet.');
+  const m = raw.match(/\[[\s\S]*\]/);
+  const data = JSON.parse(m ? m[0] : raw);
+  if (!Array.isArray(data) || !data.length) throw new Error('Expected a non-empty JSON array.');
+  return data;
+}
+
+function numVal(s) {
+  if (s == null) return null;
+  let t = String(s).trim().replace(/[$,%°]/g, '').replace(/−/g, '-').replace(/^(-?[\d./√π ]+?)\s+(square |cubic )?(units?|feet|foot|inches|centimeters|meters|miles|kilometers|hours?|minutes?|seconds?|degrees|dollars|cents|people|students)$/i, '$1').trim();
+  if (/^[a-z]\s*=\s*/i.test(t)) t = t.replace(/^[a-z]\s*=\s*/i, '');
+  let m;
+  if ((m = t.match(/^(-?\d+)\s+(\d+)\/(\d+)$/))) { const w = +m[1]; return w + Math.sign(w || 1) * (+m[2] / +m[3]); }
+  if ((m = t.match(/^\(?(-?\d+(?:\.\d+)?)\)?\/\(?(\d+(?:\.\d+)?)\)?$/))) return +m[1] / +m[2];
+  if ((m = t.match(/^(-?\d*(?:\.\d+)?)π$/))) return (m[1] === '' ? 1 : m[1] === '-' ? -1 : +m[1]) * Math.PI;
+  if ((m = t.match(/^(-?\d*(?:\.\d+)?)√(\d+(?:\.\d+)?)$/))) return (m[1] === '' ? 1 : m[1] === '-' ? -1 : +m[1]) * Math.sqrt(+m[2]);
+  if (/^-?\d+(?:\.\d+)?$/.test(t)) return +t;
+  return null;
+}
+
+function words(s) { return String(s || '').trim().split(/\s+/).filter(Boolean).length; }
+
+function checkBatch(data, section) {
+  const L = ['a','b','c','d'];
+  const isEng = section === 'ACT English' || String(data[0].skill_slug || '').startsWith('act_eng_');
+  const isMath = section === 'ACT Math' || String(data[0].skill_slug || '').startsWith('act_mth_');
+  const items = [];
+  const keyCount = {A:0,B:0,C:0,D:0};
+  const stems = {};
+  let cardCount = 0, semiKey = 0, semiOffered = 0;
+
+  data.forEach((q, i) => {
+    const errs = [], warns = [];
+    const slug = String(q.skill_slug || '');
+    const twoChoice = slug === 'act_eng_clause_id';
+    const rhetorical = (typeof ENG_RHETORICAL !== 'undefined') && ENG_RHETORICAL.includes(slug);
+    const opts = L.map(l => (q['option_' + l] == null ? '' : String(q['option_' + l]).trim()));
+    const used = twoChoice ? 2 : 4;
+    const key = String(q.correct_answer || '').trim().toUpperCase();
+    const exp = String(q.explanation || '');
+    const notes = L.map(l => String(q['distractor_' + l] || '').trim());
+    const stem = String(q.stem || '');
+    const allText = [stem, exp, ...notes].join(' ');
+
+    if (typeof RETIRED_SKILLS !== 'undefined' && RETIRED_SKILLS[slug]) errs.push('Retired skill: ' + slug);
+    if (!stem) errs.push('Stem is empty.');
+    for (let k = 0; k < used; k++) if (!opts[k]) errs.push(`Option ${L[k].toUpperCase()} is empty.`);
+    if (!/^[A-D]$/.test(key) || L.indexOf(key.toLowerCase()) >= used) errs.push(`Correct answer "${q.correct_answer}" is not a usable letter.`);
+    if (currentSequence[i] && /^[A-D]$/.test(key)) {
+      const want = twoChoice ? ({A:'A',B:'B',C:'A',D:'B'})[currentSequence[i]] : currentSequence[i];
+      if (want !== key) warns.push(`Key is ${key}; the answer sequence asked for ${want}. (Ignore if you reshuffled after generating.)`);
+    }
+    // duplicates (text and value)
+    const seen = {};
+    for (let k = 0; k < used; k++) {
+      const t = opts[k].toLowerCase().replace(/\s+/g, ' ');
+      const nv = numVal(opts[k]);
+      const id = nv != null ? 'n' + nv.toFixed(6) : 't' + t;
+      if (t && seen[id]) errs.push(`Options ${seen[id]} and ${L[k].toUpperCase()} are the same ${nv != null ? 'value' : 'text'}.`);
+      else seen[id] = L[k].toUpperCase();
+    }
+    // notes
+    if (/^[A-D]$/.test(key)) {
+      const ki = L.indexOf(key.toLowerCase());
+      if (notes[ki]) warns.push(`The correct option (${key}) has a distractor note; it should be blank.`);
+      for (let k = 0; k < used; k++) {
+        if (k === ki) continue;
+        const n = notes[k];
+        if (!n) { errs.push(`Distractor note ${L[k].toUpperCase()} is empty.`); continue; }
+        const lab = n.match(/^([A-Z][a-z]+(?:[ -][a-z]+){0,3}):\s/);
+        if (lab && !/s$/.test(lab[1].split(/[ -]/)[0])) warns.push(`Note ${L[k].toUpperCase()} starts with a category label ("${lab[1]}:").`);
+        if ((n.match(/(?<!\d)[.!?]["”]?\s+(?=["“(]?[A-Z])/g) || []).length >= 1) warns.push(`Note ${L[k].toUpperCase()} is more than one sentence.`);
+        else if (words(n) > 40) warns.push(`Note ${L[k].toUpperCase()} is long (${words(n)} words).`);
+        if (/\b(arithmetic error|calculation (mistake|error)|careless|slip)\b/i.test(n)) warns.push(`Note ${L[k].toUpperCase()} blames an arithmetic slip; name a reasoning error instead.`);
+      }
+    }
+    // explanation
+    if (/(?:^|[.!?]\s+)wait[,.!]|\b(hmm|let me|let's (re)?check|let me recheck|oops|actually,? (that|this|no)\b)/i.test(allText)) errs.push('Draft or self-correction text in the explanation or notes.');
+    if (/\b(choice|option|answer|as in)\s+\(?[A-D]\)?(?![\w'’])/.test(exp) || /(^|\s)\([A-D]\)\s/.test(exp) || /(^|[.!?]\s+)[B-D]\s+(is|adds|creates|uses|would|makes|has|puts|places|changes|removes|offers|keeps|reads|fixes|introduces|leaves|turns|joins|drops|treats|moves|sounds|looks|seems)\b/.test(exp) || /(^|[.!?]\s+)A\s+(adds|creates|uses|would|makes|puts|places|changes|removes|offers|keeps|reads|fixes|introduces|leaves|turns|joins|drops|treats|moves|sounds|looks|seems)\b/.test(exp)) warns.push('Explanation refers to an option by its letter; use the value or wording.');
+    if (/\b(Principle|Rule|Property|Theorem|Formula|Law)\s+(states|says|tells us)\b/.test(exp)) warns.push('Explanation opens with a named rule ("… Principle states that"); state the rule plainly.');
+    const lvl = parseInt(q.difficulty) || 2;
+    const cap = lvl === 1 ? 90 : lvl === 2 ? 110 : 130;
+    if (words(exp) > cap + 10) warns.push(`Explanation is ${words(exp)} words (target at most about ${cap} at L${lvl}).`);
+    if (!twoChoice && !/tempting|common (wrong answer|error|mistake)|wrong answer|might choose|might pick|trap/i.test(exp)) warns.push('Explanation may not name the most tempting wrong answer.');
+    // stems
+    if (isEng && /\b(NOT|EXCEPT|LEAST)\b/.test(stem)) errs.push('Stem uses NOT/EXCEPT/LEAST, which the 2026 ACT dropped.');
+    const sk = stem.toLowerCase().replace(/\s+/g, ' ').slice(0, 120);
+    if (stems[sk]) warns.push(`Stem repeats question ${stems[sk]}.`); else stems[sk] = i + 1;
+    if (/\b(cards?|deck)\b/i.test(stem)) cardCount++;
+
+    if (isEng) {
+      if (!twoChoice && !rhetorical && !/^no change$/i.test(opts[0])) errs.push('Option A should be NO CHANGE.');
+      if (!twoChoice && !rhetorical && !/_[^_]+_/.test(stem) && !/\^/.test(stem)) warns.push('No underlined portion (_like this_) or caret found in the stem.');
+      if (opts.some(o => /;\s*(and|but|or|so|yet|for|nor)\b/i.test(o))) errs.push('An option uses "; and" (semicolon + conjunction), which recent forms never use.');
+      if (/best version of the underlined portion/i.test(stem)) warns.push('Old stem wording; use "Which choice makes the sentence most grammatically acceptable?"');
+      if (opts.some(o => /;/.test(o))) { semiOffered++; if (/^[A-D]$/.test(key) && /;/.test(opts[L.indexOf(key.toLowerCase())])) semiKey++; }
+    }
+    if (isMath) {
+      const nums = opts.slice(0, used).map(numVal);
+      if (nums.every(x => x != null)) {
+        const asc = nums.every((x, k) => k === 0 || x > nums[k - 1]);
+        const desc = nums.every((x, k) => k === 0 || x < nums[k - 1]);
+        if (!asc && !desc) errs.push('Numeric options are not in ascending order.');
+      }
+      if (/(^|[^\d.])0[a-zA-Z](?![a-z])/.test(opts.join(' '))) errs.push('An option has a zero-coefficient term (like 0x²).');
+      if (/\b(10|25|50|100)\s?%/.test(stem)) warns.push('Stem uses a round percent (10, 25, 50, or 100%).');
+      if (/leave (your|the) answer in terms of π/i.test(stem)) warns.push('Remove "Leave your answer in terms of π."');
+      if (/coordinate plane/i.test(stem) && !/standard \(x,\s?y\) coordinate plane/i.test(stem)) warns.push('Write "the standard (x,y) coordinate plane."');
+      if (/[½⅓⅔¼¾⅛]/.test(allText + opts.join(' '))) warns.push('Uses a fraction character (½); write fractions as a/b.');
+      const fig = String(q.figure || '');
+      if (/\b(figure|shown|diagram)\b/i.test(stem) && !fig) warns.push('Stem mentions a figure but the figure field is blank.');
+    }
+    if (/^[A-D]$/.test(key)) keyCount[key]++;
+    items.push({ n: i + 1, errs, warns, stem });
+  });
+
+  const batch = [];
+  const n = data.length;
+  const spread = `Answer keys: A ${keyCount.A}, B ${keyCount.B}, C ${keyCount.C}, D ${keyCount.D}.`;
+  const maxLetter = Math.max(keyCount.A, keyCount.B, keyCount.C, keyCount.D);
+  if (n >= 8 && maxLetter > Math.ceil(n * 5 / 9)) batch.push({ t: 'warn', m: spread + ' One letter is the key on more than 5 of 9.' });
+  else batch.push({ t: 'ok', m: spread });
+  if (cardCount > 2) batch.push({ t: 'warn', m: `${cardCount} questions use playing cards (limit 2 per batch).` });
+  if (data[0] && data[0].skill_slug === 'act_eng_clause_ic_ic_semicolon' && semiKey > Math.round(n * 0.45)) batch.push({ t: 'warn', m: `The semicolon is correct on ${semiKey} of ${n}; the target is about 40%.` });
+  return { items, batch };
+}
+
+function runChecks() {
+  const out = document.getElementById('check-results');
+  let data;
+  try { data = parseBatch(document.getElementById('check-input').value); }
+  catch (e) { out.innerHTML = `<div class="chk-err">Could not read the JSON: ${esc(e.message)}</div>`; return; }
+  window._lastBatch = data;
+  const { items, batch } = checkBatch(data, document.getElementById('in-section').value);
+  const bad = items.filter(it => it.errs.length || it.warns.length);
+  let html = batch.map(b => `<div class="chk-${b.t === 'ok' ? 'ok' : 'warn'}">${esc(b.m)}</div>`).join('');
+  html += `<div class="chk-sum">${items.length} questions checked · ${items.filter(it => it.errs.length).length} with problems to fix · ${items.filter(it => !it.errs.length && it.warns.length).length} with warnings only</div>`;
+  if (!bad.length) html += '<div class="chk-ok">No problems found. Run the blind solve next to check the keys.</div>';
+  bad.forEach(it => {
+    html += `<div class="chk-item"><div class="chk-q">Question ${it.n}: <span class="pm">${esc(it.stem.slice(0, 90))}${it.stem.length > 90 ? '…' : ''}</span></div>` +
+      it.errs.map(e => `<div class="chk-err">✕ ${esc(e)}</div>`).join('') +
+      it.warns.map(w => `<div class="chk-warn">! ${esc(w)}</div>`).join('') + '</div>';
+  });
+  out.innerHTML = html;
+}
+
+function buildBlindPrompt(data) {
+  const L = ['a','b','c','d'];
+  const body = data.map((q, i) => {
+    const opts = L.map(l => q['option_' + l]).map((o, k) => (o == null || String(o).trim() === '') ? null : `${L[k].toUpperCase()}. ${o}`).filter(Boolean).join('\n');
+    const fig = q.figure ? `\n[Figure: ${String(q.figure).replace(/^FIGURE NEEDED:\s*/i, '')}]` : '';
+    return `Question ${i + 1}\n${q.stem}${fig}\n${opts}`;
+  }).join('\n\n');
+  return `Solve each of the following ${data.length} ACT-style questions on your own. Work each one carefully; you may use a calculator or code tool for math.
+
+In English questions, the underlined portion is marked _like this_. Option A "NO CHANGE" keeps the original wording.
+
+For each question, report the letter you would choose. Also flag any question where more than one option is defensible, no option is correct, the question is unclear, or (for math) a described figure could not exist with the numbers given.
+
+Return ONLY a JSON array, one object per question, in order:
+[{"n": 1, "answer": "B", "flag": ""}, ...]
+Leave "flag" blank unless there is a problem; when there is one, describe it in one sentence.
+
+${body}`;
+}
+
+function copyBlindPrompt() {
+  let data;
+  try { data = window._lastBatch || parseBatch(document.getElementById('check-input').value); }
+  catch (e) { document.getElementById('check-results').innerHTML = `<div class="chk-err">Paste the generated JSON above first. (${esc(e.message)})</div>`; return; }
+  window._lastBatch = data;
+  const text = buildBlindPrompt(data);
+  const btn = document.getElementById('blind-btn');
+  const done = () => { btn.textContent = 'Copied: paste into a NEW chat'; setTimeout(() => btn.textContent = 'Copy blind-solve prompt', 3000); };
+  navigator.clipboard.writeText(text).then(done).catch(() => {
+    const ta = document.getElementById('blind-fallback');
+    ta.style.display = 'block'; ta.value = text; ta.select();
+    btn.textContent = 'Copy failed: select the text below';
+  });
+}
+
+function compareBlind() {
+  const out = document.getElementById('blind-results');
+  let data, ans;
+  try { data = window._lastBatch || parseBatch(document.getElementById('check-input').value); }
+  catch (e) { out.innerHTML = `<div class="chk-err">Paste the generated JSON in the box above first.</div>`; return; }
+  try { ans = parseBatch(document.getElementById('blind-input').value); }
+  catch (e) { out.innerHTML = `<div class="chk-err">Could not read the blind-solve answers: ${esc(e.message)}</div>`; return; }
+  const byN = {};
+  ans.forEach((a, i) => { byN[a.n || i + 1] = a; });
+  let agree = 0, html = '';
+  data.forEach((q, i) => {
+    const a = byN[i + 1];
+    const key = String(q.correct_answer || '').trim().toUpperCase();
+    if (!a) { html += `<div class="chk-warn">Question ${i + 1}: no blind-solve answer returned.</div>`; return; }
+    const got = String(a.answer || '').trim().toUpperCase();
+    const flag = String(a.flag || '').trim();
+    if (got === key && !flag) { agree++; return; }
+    html += `<div class="chk-item"><div class="chk-q">Question ${i + 1}: <span class="pm">${esc(String(q.stem).slice(0, 90))}…</span></div>` +
+      (got !== key ? `<div class="chk-err">✕ Key is ${esc(key)}; the blind solve chose ${esc(got || '(none)')}. Check which is right before using this question.</div>` : '') +
+      (flag ? `<div class="chk-warn">! Flag: ${esc(flag)}</div>` : '') + '</div>';
+  });
+  out.innerHTML = `<div class="chk-sum">${agree} of ${data.length} questions agree with no flags.</div>` + (html || '<div class="chk-ok">Every key matched and nothing was flagged.</div>');
+}
+
+</script>
+</body>
+</html>
